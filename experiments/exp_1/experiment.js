@@ -269,11 +269,11 @@ function initStudy(graphData, condition) {
                         <label style='display:block; margin-bottom:6px;'><input type='radio' name='q1' value='same_food'> They eat the same food</label>
                     </div>
 
-                    <p style='margin-top:20px;'><b>2. At the end of the study, you'll be asked to:</b></p>
+                    <p style='margin-top:20px;'><b>2. Which of the following are <b>NOT</b> one of the food items that the gazorps eat?</b></p>
                     <div style='margin-left:20px; text-align:left;'>
-                        <label style='display:block; margin-bottom:6px;'><input type='radio' name='q2' value='predict'> Predict what new gazorps eat</label>
-                        <label style='display:block; margin-bottom:6px;'><input type='radio' name='q2' value='draw'> Draw a gazorp</label>
-                        <label style='display:block; margin-bottom:6px;'><input type='radio' name='q2' value='name'> Name all 12 gazorps</label>
+                        <label style='display:block; margin-bottom:6px;'><input type='radio' name='q2' value='Bubba'>Bubba</label>
+                        <label style='display:block; margin-bottom:6px;'><input type='radio' name='q2' value='Glorp'>Glorp</label>
+                        <label style='display:block; margin-bottom:6px;'><input type='radio' name='q2' value='Flim'>Flim</label>
                     </div>
 
                     <p style='margin-top:20px;'><b>3. How many gazorps will you learn about?</b></p>
@@ -303,7 +303,7 @@ function initStudy(graphData, condition) {
                     return;
                 }
 
-                var correct = q1.value === 'friends' && q2.value === 'predict' && q3.value === '12';
+                var correct = q1.value === 'friends' && q2.value === 'Bubba' && q3.value === '12';
                 if (!correct) {
                     compRetries++;
                     sessionData.attention_flags.failed_comprehension_retries = compRetries;
