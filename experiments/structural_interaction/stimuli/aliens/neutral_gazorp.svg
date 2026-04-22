@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 115">
+  <!-- antennae -->
+  <line x1="38" y1="16" x2="32" y2="4" stroke="#bbb" stroke-width="3" stroke-linecap="round"/>
+  <circle cx="31" cy="3" r="5" fill="#bbb"/>
+  <line x1="62" y1="16" x2="68" y2="4" stroke="#bbb" stroke-width="3" stroke-linecap="round"/>
+  <circle cx="69" cy="3" r="5" fill="#bbb"/>
+  <!-- body -->
+  <ellipse cx="50" cy="62" rx="38" ry="45" fill="#c8c8c8"/>
+  <!-- eyes -->
+  <circle cx="36" cy="50" r="9" fill="#e0e0e0"/>
+  <circle cx="64" cy="50" r="9" fill="#e0e0e0"/>
+  <circle cx="38" cy="49" r="4" fill="#777"/>
+  <circle cx="66" cy="49" r="4" fill="#777"/>
+  <circle cx="39" cy="48" r="1.5" fill="white"/>
+  <circle cx="67" cy="48" r="1.5" fill="white"/>
+  <!-- mouth -->
+  <path d="M39 72 Q50 80 61 72" stroke="#aaa" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+</svg>

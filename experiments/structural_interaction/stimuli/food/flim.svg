@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 60 72">
+  <!-- stem -->
+  <line x1="30" y1="68" x2="30" y2="52" stroke="#1e8449" stroke-width="3" stroke-linecap="round"/>
+  <!-- leaf shape -->
+  <path d="M30 8 C8 18, 4 50, 30 56 C56 50, 52 18, 30 8 Z" fill="#27ae60"/>
+  <!-- midrib -->
+  <line x1="30" y1="10" x2="30" y2="54" stroke="#1e8449" stroke-width="2" stroke-linecap="round"/>
+  <!-- veins -->
+  <line x1="30" y1="24" x2="13" y2="35" stroke="#1e8449" stroke-width="1.2" opacity="0.7"/>
+  <line x1="30" y1="36" x2="11" y2="45" stroke="#1e8449" stroke-width="1.2" opacity="0.7"/>
+  <line x1="30" y1="24" x2="47" y2="35" stroke="#1e8449" stroke-width="1.2" opacity="0.7"/>
+  <line x1="30" y1="36" x2="49" y2="45" stroke="#1e8449" stroke-width="1.2" opacity="0.7"/>
+</svg>
