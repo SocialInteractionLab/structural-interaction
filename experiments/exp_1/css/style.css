@@ -52,7 +52,7 @@ p, li, label { user-select: none; -webkit-user-select: none; }
   background-color: #343633; color: white;
   transition: background-color 0.15s ease;
 }
-.jspsych-btn:hover:not(:disabled) { background-color: #05668D; }
+.jspsych-btn:hover:not(:disabled) { background-color: #555; }
 .jspsych-btn:disabled { background-color: #ccc; color: #888; cursor: not-allowed; }
 #consent-btn { padding: 14px 36px; font-size: 17px; margin-top: 4px; }
 
@@ -254,6 +254,8 @@ input[type="range"].trial-slider::-moz-range-track {
   transition: all 0.12s ease;
 }
 .choice-btn:hover { background: #343633; color: white; }
+.food-btn { display: flex; align-items: center; gap: 10px; padding: 10px 24px; }
+.food-btn-icon { width: 36px; height: 36px; object-fit: contain; }
 
 /* ── transfer trial ─────────────────────────────────────────────── */
 .transfer-box {
@@ -274,6 +276,8 @@ input[type="range"].trial-slider::-moz-range-track {
   transition: all 0.12s ease;
 }
 .cue-btn:hover { background: #343633; color: white; }
+.cue-btn.selected { background: #343633; color: white; }
+.cue-btn:disabled { opacity: 0.5; cursor: default; }
 
 /* cue reveal: novel agent + friends layout */
 .reveal-center { display: flex; flex-direction: column; align-items: center; gap: 24px; }
@@ -300,9 +304,6 @@ input[type="range"].trial-slider::-moz-range-track {
 }
 .pred-btn:hover { background: #343633; color: white; }
 .pred-btn.selected { background: #343633; color: white; }
-.confidence-wrap {
-  margin-top: 24px; display: none; /* revealed after binary click */
-}
 
 /* strategy textbox */
 .strategy-box {

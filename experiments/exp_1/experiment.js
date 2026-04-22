@@ -21,6 +21,7 @@ function initStudy(graphData, condition) {
               '_' + [String(_now.getHours()).padStart(2,'0'), String(_now.getMinutes()).padStart(2,'0'), String(_now.getSeconds()).padStart(2,'0')].join('');
     jsPsych.data.addProperties({ sessionTimestamp: _ts });
 
+    applyFullscreenOverlay();
     if (!TESTING_MODE) applyProductionProtections(jsPsych);
 
     // tab visibility log
@@ -95,6 +96,16 @@ function initStudy(graphData, condition) {
     jsPsych.data.addProperties({ sessionData });
     logToBrowser('session init', { condition, graphId: graphData.graph_id, nameMapping, behaviorLabels });
 
+    console.log(
+        `%c[structural-interaction]`,
+        'font-weight:bold; color:#353633;',
+        `\ncondition : ${condition}`,
+        `\ngraph     : ${graphData.graph_id} (seed ${graphData.seed})`,
+        `\nρ(E→B)    : ${condData.rho_EB}`,
+        `\nρ(C→B)    : ${condData.rho_CB}`,
+        `\nbehavior labels: 0=${behaviorLabels[0]}, 1=${behaviorLabels[1]}`
+    );
+
 
     // ══════════════════════════════════════════════════════════════
     // CONSENT
@@ -136,25 +147,46 @@ function initStudy(graphData, condition) {
     // OVERVIEW INSTRUCTIONS + COMPREHENSION CHECK (with retry loop)
     // ══════════════════════════════════════════════════════════════
     var overviewPages = [
+        // page 1: introduce gazorp species w/ images
         `<div class='content-box'>
-            <p>On an island called <b>Plak</b>, there live 12 aliens called <b>gazorps</b>.</p>
-            <ul>
-                <li>Each gazorp is either a <b>blue gazorp</b> or a <b>red gazorp</b>.</li>
-                <li>Each gazorp eats one of two foods (you'll learn the names shortly).</li>
-                <li>Some gazorps are <b>friends</b> with each other.</li>
-            </ul>
-            <p>You'll spend most of the study learning about these gazorps. At the end, you'll meet <b>5 new gazorps</b> and try to predict what they eat.</p>
+            <p>On an island called <b>dude</b>, there are 12 aliens called <b>gazorps</b>.</p>
+            <p>Each gazorp is either a <span style='color:#2596be; font-weight:600;'>blue gazorp</span> or a <span style='color:#f14d4d; font-weight:600;'>red gazorp</span>:</p>
+            <div style='display:flex; justify-content:center; align-items:center; gap:32px; margin:24px 0;'>
+                <div style='text-align:center;'>
+                    <img src='stimuli/aliens/blue_gazorp.png' style='width:120px; height:120px; object-fit:contain;'>
+                </div>
+                <div style='color:#555; font-size:18px; font-weight:600;'>or</div>
+                <div style='text-align:center;'>
+                    <img src='stimuli/aliens/red_gazorp.png' style='width:120px; height:120px; object-fit:contain;'>
+                </div>
+            </div>
+            <p>Some of the gazorps are <b>friends</b> with each other.</p>
         </div>`,
+        // page 2: introduce the two foods w/ icons
         `<div class='content-box'>
-            <p>You'll see pairs of gazorps on screen. Each pair are friends.</p>
+            <p>Each gazorp eats one of two foods:</p>
+            <div style='display:flex; justify-content:center; align-items:center; gap:32px; margin:24px 0;'>
+                <div style='text-align:center;'>
+                    <img src='stimuli/food/glorp.svg' style='width:80px; height:80px; object-fit:contain;'>
+                    <div style='margin-top:8px; font-weight:600; font-size:18px;'>glorp</div>
+                </div>
+                <div style='color:#555; font-size:18px; font-weight:600;'>or</div>
+                <div style='text-align:center;'>
+                    <img src='stimuli/food/flim.svg' style='width:80px; height:80px; object-fit:contain;'>
+                    <div style='margin-top:8px; font-weight:600; font-size:18px;'>flim</div>
+                </div>
+            </div>
+        </div>`,
+        // page 3: what to pay attention to
+        `<div class='content-box'>
+            <p>You'll see pairs of gazorps on screen. Each pair of gazorps you see together are friends.</p>
             <p>After a moment, you'll also see what each gazorp eats.</p>
-            <p>You'll see all the pairs many times. <b>Pay close attention</b> to:</p>
+            <p><b>Pay close attention</b> to:</p>
             <ul>
                 <li>Who is friends with whom</li>
                 <li>Whether each gazorp is blue or red</li>
                 <li>What each gazorp eats</li>
             </ul>
-            <p>You'll be tested on all three afterward.</p>
         </div>`
     ];
 
@@ -264,24 +296,23 @@ function initStudy(graphData, condition) {
         type: jsPsychInstructions,
         pages: [`
             <div class='content-box'>
-                <p>You'll see pairs of gazorps who are friends. The gazorps eat either <b>glorp</b> or <b>flim</b>.</p>
-                <p>After each pair appears, wait a moment and you'll see what each one eats.</p>
-                <p><b>Try to remember:</b></p>
-                <ul>
-                    <li>Who is friends with whom</li>
-                    <li>Whether each gazorp is blue or red</li>
-                    <li>What each gazorp eats</li>
-                </ul>
-                <p style='background:#fff8e1; border:1px solid #ffe082; border-radius:6px;
-                    padding:12px 16px; font-size:16px;'>
-                    ⚠️ Sometimes a gazorp will appear <b>upside-down</b>.
-                    When that happens, press the <b>SPACEBAR</b> right away.
-                </p>
+                <p>⚠️ Sometimes a gazorp will appear <b>upside-down</b> ⚠️</p>
+                <p>When that happens, press the <b>SPACEBAR</b> right away.</p>
             </div>`],
         show_clickable_nav: true,
         allow_keys: false,
         on_load: function() { lockInstructionsNext(5); },
         on_page_change: function() { lockInstructionsNext(5); }
+    };
+
+    var readyToStart = {
+        type: jsPsychHtmlButtonResponse,
+        stimulus: `
+            <div class='content-box' style='text-align:center;'>
+                <p style='font-size:20px; font-weight:600;'>You're all set!</p>
+                <p style='font-size:17px; color:#555;'>Click below when you're ready to start the experiment.</p>
+            </div>`,
+        choices: ['Start Experiment']
     };
 
     // pre-build all learning trials (10 runs × edges, with 12.5% upside-down)
@@ -362,7 +393,7 @@ function initStudy(graphData, condition) {
     };
 
     var edgeRecTrials = buildEdgeRecTrials(
-        graphData.edge_recognition_trials, nameMapping, jsPsych, sessionData
+        graphData.edge_recognition_trials, nameMapping, species, jsPsych, sessionData
     );
 
     var speciesHeader = {
@@ -388,7 +419,7 @@ function initStudy(graphData, condition) {
     };
 
     var behaviorRecallTrials = buildBehaviorRecallTrials(
-        behavior, nameMapping, behaviorLabels, jsPsych, sessionData
+        behavior, nameMapping, behaviorLabels, species, jsPsych, sessionData
     );
 
     // compute exclusion flags after phase 2
@@ -423,13 +454,13 @@ function initStudy(graphData, condition) {
         pages: [`
             <div class='content-box'>
                 <p>You'll now meet <b>5 new gazorps</b> you haven't seen before.</p>
-                <p>For each one, you can look up <b>one thing</b> to help predict what they eat:</p>
+                <p>For each one, you can reveal <b>one thing</b> to help you determine what they like to eat:</p>
                 <ul>
                     <li>Whether they're a blue or red gazorp, <b>or</b></li>
                     <li>Who their friends are</li>
                 </ul>
                 <p>Then you'll make a prediction and rate how confident you are.</p>
-                <p>There's no right or wrong choice. Just go with whatever feels most useful.</p>
+                <p>There's no right or wrong choice --  we're just interested in what you think!</p>
             </div>`],
         show_clickable_nav: true,
         allow_keys: false,
@@ -525,7 +556,7 @@ function initStudy(graphData, condition) {
                 <p style='font-size:17px;'>Your responses have been saved and will help our research.</p>
                 <p style='color:#888; font-size:15px; margin-top:24px;'>
                     You'll be redirected to Prolific automatically in a few seconds.<br>
-                    If nothing happens, <a href='${PROLIFIC_COMPLETION_URL}' style='color:#028090;'>click here</a>.
+                    If nothing happens, <a href='${PROLIFIC_COMPLETION_URL}' style='color:#353633;'>click here</a>.
                 </p>
             </div>`,
         choices: [],
@@ -569,7 +600,8 @@ function initStudy(graphData, condition) {
     var timeline = [
         consent,
         comprehensionLoop,
-        phase1Instructions
+        phase1Instructions,
+        readyToStart
     ]
     .concat(learningBlock)
     .concat([

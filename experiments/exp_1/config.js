@@ -49,9 +49,9 @@ const PI_NAME             = 'Robert Hawkins';
 const CONTACT_EMAIL       = 'fangke@stanford.edu';
 const INSTITUTION         = 'Stanford University';
 const LAB_LOGO            = '🌱';
-const ESTIMATED_DURATION_MIN = 35;
-const PAYMENT             = 6.00;
-const STUDY_TITLE         = 'Learning About Aliens';
+const ESTIMATED_DURATION_MIN = 10000;
+const PAYMENT             = .001;
+const STUDY_TITLE         = 'Structural Interaction';
 
 const IDLE_TIMEOUT_MS = 5 * 60 * 1000;
 const VERBOSE = false;

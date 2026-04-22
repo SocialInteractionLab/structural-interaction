@@ -21,11 +21,12 @@ function logToBrowser(ctx, val) {
     if (VERBOSE) console.log('\t', ctx, ':', val);
 }
 
-// fills slider track w/ teal color up to current value
-function updateSliderGradient(slider) {
+// fills slider track up to current value; color defaults to teal
+function updateSliderGradient(slider, color) {
+    var c = color || '#343633';
     var pct = ((slider.value - slider.min) / (slider.max - slider.min)) * 100;
     slider.style.background =
-        `linear-gradient(to right, #028090 0%, #028090 ${pct}%, #e0e0e0 ${pct}%, #e0e0e0 100%)`;
+        `linear-gradient(to right, ${c} 0%, ${c} ${pct}%, #e0e0e0 ${pct}%, #e0e0e0 100%)`;
     var valEl = slider.parentElement &&
         slider.parentElement.querySelector('.slider-value-display');
     if (valEl) {
@@ -60,17 +61,8 @@ function checkMobile() {
     return false;
 }
 
-function applyProductionProtections(jsPsych) {
-    document.addEventListener('contextmenu', e => e.preventDefault());
-    document.addEventListener('keydown', function(e) {
-        if (e.key === 'F12') { e.preventDefault(); return; }
-        if ((e.ctrlKey || e.metaKey) && e.shiftKey && 'ijcIJC'.includes(e.key)) { e.preventDefault(); return; }
-        if ((e.ctrlKey || e.metaKey) && 'uU'.includes(e.key)) { e.preventDefault(); return; }
-    });
-    ['copy', 'cut', 'paste'].forEach(evt =>
-        document.addEventListener(evt, e => e.preventDefault()));
-
-    // fullscreen overlay
+// always active — not gated by TESTING_MODE
+function applyFullscreenOverlay() {
     var overlay = document.createElement('div');
     overlay.id = 'fullscreen-overlay';
     overlay.style.display = 'none';
@@ -83,6 +75,17 @@ function applyProductionProtections(jsPsych) {
     document.addEventListener('fullscreenchange', function() {
         overlay.style.display = document.fullscreenElement ? 'none' : 'flex';
     });
+}
+
+function applyProductionProtections(jsPsych) {
+    document.addEventListener('contextmenu', e => e.preventDefault());
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'F12') { e.preventDefault(); return; }
+        if ((e.ctrlKey || e.metaKey) && e.shiftKey && 'ijcIJC'.includes(e.key)) { e.preventDefault(); return; }
+        if ((e.ctrlKey || e.metaKey) && 'uU'.includes(e.key)) { e.preventDefault(); return; }
+    });
+    ['copy', 'cut', 'paste'].forEach(evt =>
+        document.addEventListener(evt, e => e.preventDefault()));
 
     // idle timeout
     var lastActivity = Date.now();

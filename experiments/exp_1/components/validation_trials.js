@@ -2,21 +2,21 @@
 
 // 2a — edge recognition
 // trials: array of {pair, true_edge} from graph JSON
-function buildEdgeRecTrials(trials, nameMapping, jsPsych, sessionData) {
+function buildEdgeRecTrials(trials, nameMapping, species, jsPsych, sessionData) {
     var shuffled = jsPsych.randomization.shuffle([...trials]);
     return shuffled.map(function(t, i) {
         var nameA = nameMapping[t.pair[0]], nameB = nameMapping[t.pair[1]];
         var html = `
             <div class='validation-box prevent-select'>
                 <div class='trial-counter'>${i + 1} / ${shuffled.length}</div>
-                <p class='prompt'>Were <b>${nameA}</b> and <b>${nameB}</b> friends?</p>
+                <p class='prompt'>Were these two gazorps friends with each other?</p>
                 <div class='validation-pair'>
                     <div class='validation-alien'>
-                        <img src='stimuli/aliens/neutral_gazorp.svg' class='neutral-img' alt='${nameA}'>
+                        <img src='stimuli/aliens/blue_gazorp.png' class='neutral-img' style='filter:grayscale(100%);' alt='${nameA}'>
                         <div class='validation-name'>${nameA}</div>
                     </div>
                     <div class='validation-alien'>
-                        <img src='stimuli/aliens/neutral_gazorp.svg' class='neutral-img' alt='${nameB}'>
+                        <img src='stimuli/aliens/blue_gazorp.png' class='neutral-img' style='filter:grayscale(100%);' alt='${nameB}'>
                         <div class='validation-name'>${nameB}</div>
                     </div>
                 </div>
@@ -65,13 +65,17 @@ function buildSpeciesRecallTrials(species, nameMapping, jsPsych, sessionData) {
                 <p class='prompt'>Is <b>${name}</b> a blue gazorp or a red gazorp?</p>
                 <div class='validation-pair'>
                     <div class='validation-alien'>
-                        <img src='stimuli/aliens/neutral_gazorp.svg' class='neutral-img' alt='${name}'>
+                        <img src='${speciesImg(truth)}' class='neutral-img' style='filter:grayscale(100%);' alt='${name}'>
                         <div class='validation-name'>${name}</div>
                     </div>
                 </div>
                 <div class='btn-row'>
-                    <button class='choice-btn' id='btn-blue'>blue gazorp</button>
-                    <button class='choice-btn' id='btn-red'>red gazorp</button>
+                    <button class='choice-btn food-btn' id='btn-blue'>
+                        <img src='stimuli/aliens/blue_gazorp.png' class='food-btn-icon'>blue gazorp
+                    </button>
+                    <button class='choice-btn food-btn' id='btn-red'>
+                        <img src='stimuli/aliens/red_gazorp.png' class='food-btn-icon'>red gazorp
+                    </button>
                 </div>
             </div>`;
 
@@ -102,7 +106,7 @@ function buildSpeciesRecallTrials(species, nameMapping, jsPsych, sessionData) {
 
 // 2c — behavior recall (node → glorp or flim)
 // behavior: array[12], behaviorLabels: {0: 'glorp'|'flim', 1: ...}
-function buildBehaviorRecallTrials(behavior, nameMapping, behaviorLabels, jsPsych, sessionData) {
+function buildBehaviorRecallTrials(behavior, nameMapping, behaviorLabels, species, jsPsych, sessionData) {
     var nodes = jsPsych.randomization.shuffle([...Array(12).keys()]);
     var label0 = behaviorLabels[0], label1 = behaviorLabels[1];
     return nodes.map(function(node, i) {
@@ -114,13 +118,17 @@ function buildBehaviorRecallTrials(behavior, nameMapping, behaviorLabels, jsPsyc
                 <p class='prompt'>What does <b>${name}</b> eat?</p>
                 <div class='validation-pair'>
                     <div class='validation-alien'>
-                        <img src='stimuli/aliens/neutral_gazorp.svg' class='neutral-img' alt='${name}'>
+                        <img src='${speciesImg(species[node])}' class='neutral-img' alt='${name}'>
                         <div class='validation-name'>${name}</div>
                     </div>
                 </div>
                 <div class='btn-row'>
-                    <button class='choice-btn' id='btn-b0'>${label0}</button>
-                    <button class='choice-btn' id='btn-b1'>${label1}</button>
+                    <button class='choice-btn food-btn' id='btn-b0'>
+                        <img src='${behaviorIcon(0, behaviorLabels)}' class='food-btn-icon'>${label0}
+                    </button>
+                    <button class='choice-btn food-btn' id='btn-b1'>
+                        <img src='${behaviorIcon(1, behaviorLabels)}' class='food-btn-icon'>${label1}
+                    </button>
                 </div>
             </div>`;
 

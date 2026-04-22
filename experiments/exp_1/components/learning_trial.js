@@ -98,7 +98,7 @@ function buildRunBreak(runNum, totalRuns, jsPsych) {
         stimulus: `
             <div class='run-break-box'>
                 <p style='font-size:17px; color:#888; margin-bottom:6px;'>
-                    Run ${runNum - 1} of ${totalRuns} complete
+                    Run ${runNum} of ${totalRuns} complete
                 </p>
                 <p style='font-size:22px; font-weight:600; color:#333;'>Take a breath.</p>
                 <p style='font-size:17px; color:#555;'>
