@@ -9,18 +9,29 @@ import networkx as nx
 import json, os
 
 # ── configurable ─────────────────────────────────────────────
-NUM_GRAPHS = 5
+NUM_GRAPHS   = 5
+N            = 12        # number of nodes
+N_EDGES      = 15        # exact number of edges required
 
-# fixed params
-N = 12; M = 2; K = 2; p_in = 0.6; p_out = 0.2
+# no-category pilot mode: all gazorps same species (all blue), homophily only
+# skips category condition entirely — set to True for species-free pilot
+NO_CATEGORY  = False
 
-# selection criteria
-RHO_EB_MIN = 0.25     # homophily cond: min rho(E→B)
-RHO_CB_MIN = 0.25     # category cond: min rho(C→B)
-EDGE_RANGE = [20, 30]
-MIN_DEGREE = 2
-SPECIES_BALANCE_MAX = 0.30   # |deg_s0 - deg_s1| / mean_deg
-MAX_ATTEMPTS = 50000
+# stochastic block model params
+M    = 2                 # number of behavior communities
+K    = 2                 # number of species groups
+P_IN = 0.357             # within-community edge prob  (tuned for N_EDGES=15)
+P_OUT= 0.119             # between-community edge prob (tuned for N_EDGES=15)
+
+# minimum correlation thresholds for selecting graphs
+RHO_EB_MIN   = 0.15      # homophily cond: min rho(E→B) — edge predicts behavior
+RHO_CB_MIN   = 0.15      # category cond:  min rho(C→B) — species predicts behavior (ignored if NO_CATEGORY)
+RHO_OTHER_MAX= 0.05      # max |rho| for the *other* cue in each condition (ignored if NO_CATEGORY)
+
+# other selection criteria
+MIN_DEGREE         = 2
+SPECIES_BALANCE_MAX= 0.30   # max |mean_deg_s0 - mean_deg_s1| / mean_deg (ignored if NO_CATEGORY)
+MAX_ATTEMPTS       = 50000
 # ─────────────────────────────────────────────────────────────
 
 
@@ -52,7 +63,7 @@ def try_make_graph(seed):
     A = np.zeros((N, N), dtype=int)
     for i in range(N):
         for j in range(i + 1, N):
-            p = p_in if latent_B[i] == latent_B[j] else p_out
+            p = P_IN if latent_B[i] == latent_B[j] else P_OUT
             if rng.random() < p:
                 A[i, j] = A[j, i] = 1
 
@@ -64,43 +75,59 @@ def try_make_graph(seed):
         return None
     if min(dict(G.degree()).values()) < MIN_DEGREE:
         return None
-    if not (EDGE_RANGE[0] <= edge_count <= EDGE_RANGE[1]):
+    if edge_count != N_EDGES:
         return None
 
-    # homophily condition: behavior = latent, species = random shuffle
+    # homophily condition: behavior = latent, species = all-0 if NO_CATEGORY else random shuffle
     B_hom = latent_B.copy()
     group_pool = np.array([g for g in range(K) for _ in range(N // K)])
-    C_hom = group_pool.copy()
-    rng.shuffle(C_hom)
+
+    if NO_CATEGORY:
+        C_hom = np.zeros(N, dtype=int)   # all same species
+    else:
+        C_hom = group_pool.copy()
+        rng.shuffle(C_hom)
 
     rho_EB_hom = compute_rho_EB(A, B_hom)
     rho_CB_hom = compute_rho_CB(C_hom, B_hom)
     if rho_EB_hom < RHO_EB_MIN:
         return None
 
-    # species balance: check degrees don't differ too much by species
-    deg = np.array([int(A[i].sum()) for i in range(N)])
-    mean_deg = float(deg.mean())
-    deg_s0 = float(deg[C_hom == 0].mean())
-    deg_s1 = float(deg[C_hom == 1].mean())
-    if abs(deg_s0 - deg_s1) / mean_deg > SPECIES_BALANCE_MAX:
-        return None
+    if not NO_CATEGORY:
+        if abs(rho_CB_hom) > RHO_OTHER_MAX:   # species should NOT predict behavior
+            return None
+        # species balance check
+        deg = np.array([int(A[i].sum()) for i in range(N)])
+        mean_deg = float(deg.mean())
+        deg_s0 = float(deg[C_hom == 0].mean())
+        deg_s1 = float(deg[C_hom == 1].mean())
+        if abs(deg_s0 - deg_s1) / mean_deg > SPECIES_BALANCE_MAX:
+            return None
 
-    # derive epsilon for matched rho(C→B) in category condition
-    epsilon = float(np.clip(0.5 - rho_EB_hom, 0.0, 0.5))
-
-    # category condition: species = fresh shuffle, behavior derived from species
-    C_cat = group_pool.copy()
-    rng.shuffle(C_cat)
-    B_cat = np.zeros(N, dtype=int)
-    for i in range(N):
-        k = C_cat[i]
-        B_cat[i] = k if rng.random() > epsilon else 1 - k
-
-    rho_CB_cat = compute_rho_CB(C_cat, B_cat)
-    rho_EB_cat = compute_rho_EB(A, B_cat)
-    if rho_CB_cat < RHO_CB_MIN:
-        return None
+    # category condition — skipped in NO_CATEGORY mode
+    if NO_CATEGORY:
+        category_condition = None
+        epsilon = None
+    else:
+        epsilon = float(np.clip(0.5 - rho_EB_hom, 0.0, 0.5))
+        C_cat = group_pool.copy()
+        rng.shuffle(C_cat)
+        B_cat = np.zeros(N, dtype=int)
+        for i in range(N):
+            k = C_cat[i]
+            B_cat[i] = k if rng.random() > epsilon else 1 - k
+        rho_CB_cat = compute_rho_CB(C_cat, B_cat)
+        rho_EB_cat = compute_rho_EB(A, B_cat)
+        if rho_CB_cat < RHO_CB_MIN:
+            return None
+        if abs(rho_EB_cat) > RHO_OTHER_MAX:   # network should NOT predict behavior
+            return None
+        category_condition = {
+            "species":  C_cat.tolist(),
+            "behavior": B_cat.tolist(),
+            "rho_EB":   round(rho_EB_cat, 4),
+            "rho_CB":   round(rho_CB_cat, 4)
+        }
 
     # edge recognition trials: 12 true + 12 foil, balanced across nodes
     edges = [[int(i), int(j)] for i in range(N) for j in range(i + 1, N) if A[i, j] == 1]
@@ -117,7 +144,8 @@ def try_make_graph(seed):
     return {
         "graph_id": None,
         "seed": int(seed),
-        "N": N, "M": M, "K": K, "p_in": p_in, "p_out": p_out,
+        "no_category": NO_CATEGORY,
+        "N": N, "M": M, "K": K, "p_in": P_IN, "p_out": P_OUT,
         "adjacency": A.tolist(),
         "edges": edges,
         "homophily_condition": {
@@ -126,18 +154,14 @@ def try_make_graph(seed):
             "rho_EB":   round(rho_EB_hom, 4),
             "rho_CB":   round(rho_CB_hom, 4)
         },
-        "category_condition": {
-            "species":  C_cat.tolist(),
-            "behavior": B_cat.tolist(),
-            "rho_EB":   round(rho_EB_cat, 4),
-            "rho_CB":   round(rho_CB_cat, 4)
-        },
-        "epsilon": round(epsilon, 4),
+        "category_condition": category_condition,
+        "epsilon": round(epsilon, 4) if epsilon is not None else None,
         "edge_recognition_trials": er_trials
     }
 
 
-out_dir = os.path.join(os.path.dirname(__file__), '..', 'stimuli', 'graphs')
+out_dir = os.path.join(os.path.dirname(__file__), '..', 'stimuli',
+                       'graphs_no_category' if NO_CATEGORY else 'graphs')
 os.makedirs(out_dir, exist_ok=True)
 
 graphs = []
@@ -149,13 +173,21 @@ while len(graphs) < NUM_GRAPHS and seed < MAX_ATTEMPTS:
         graphs.append(g)
         hom = g["homophily_condition"]
         cat = g["category_condition"]
-        print(
-            f"graph {g['graph_id']:02d} | seed={seed:5d} | "
-            f"edges={len(g['edges']):2d} | "
-            f"hom ρEB={hom['rho_EB']:+.3f} ρCB={hom['rho_CB']:+.3f} | "
-            f"cat ρEB={cat['rho_EB']:+.3f} ρCB={cat['rho_CB']:+.3f} | "
-            f"ε={g['epsilon']:.3f}"
-        )
+        if NO_CATEGORY:
+            print(
+                f"graph {g['graph_id']:02d} | seed={seed:5d} | "
+                f"edges={len(g['edges']):2d} | "
+                f"hom ρEB={hom['rho_EB']:+.3f} ρCB={hom['rho_CB']:+.3f} | "
+                f"[no-category mode]"
+            )
+        else:
+            print(
+                f"graph {g['graph_id']:02d} | seed={seed:5d} | "
+                f"edges={len(g['edges']):2d} | "
+                f"hom ρEB={hom['rho_EB']:+.3f} ρCB={hom['rho_CB']:+.3f} | "
+                f"cat ρEB={cat['rho_EB']:+.3f} ρCB={cat['rho_CB']:+.3f} | "
+                f"ε={g['epsilon']:.3f}"
+            )
     seed += 1
 
 if len(graphs) < NUM_GRAPHS:

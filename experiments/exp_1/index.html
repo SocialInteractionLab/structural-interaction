@@ -37,12 +37,13 @@
 
         window.onload = async function() {
             // pick random condition and graph at landing
-            var condition = Math.random() < 0.5 ? 'homophily' : 'category';
-            var graphId   = Math.floor(Math.random() * NUM_GRAPHS) + 1;
+            var condition   = NO_CATEGORY_MODE ? 'homophily' : (Math.random() < 0.5 ? 'homophily' : 'category');
+            var graphId    = Math.floor(Math.random() * NUM_GRAPHS) + 1;
             var graphIdStr = String(graphId).padStart(2, '0');
+            var graphDir   = NO_CATEGORY_MODE ? 'stimuli/graphs_no_category' : 'stimuli/graphs';
 
             try {
-                var resp = await fetch('stimuli/graphs/graph_' + graphIdStr + '.json');
+                var resp = await fetch(graphDir + '/graph_' + graphIdStr + '.json');
                 if (!resp.ok) throw new Error('HTTP ' + resp.status);
                 var graphData = await resp.json();
                 initStudy(graphData, condition);

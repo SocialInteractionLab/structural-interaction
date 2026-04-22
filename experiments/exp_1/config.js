@@ -11,6 +11,10 @@ const PROLIFIC_COMPLETION_URL = 'https://app.prolific.com/submissions/complete?c
 // graph set — bump NUM_GRAPHS + re-run generate_graphs.py to add more
 const NUM_GRAPHS = 5;
 
+// no-category pilot mode: pulls from stimuli/graphs_no_category/ instead of stimuli/graphs/
+// must match the NO_CATEGORY flag used when generating graphs
+const NO_CATEGORY_MODE = true;
+
 // timing (ms)
 const LEARNING_ONSET_MS  = 2500;  // pair+species visible before behavior reveal
 const LEARNING_REVEAL_MS = 1500;  // behavior visible duration
