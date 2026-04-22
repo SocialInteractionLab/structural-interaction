@@ -146,6 +146,14 @@ function initStudy(graphData, condition) {
     // ══════════════════════════════════════════════════════════════
     // OVERVIEW INSTRUCTIONS + COMPREHENSION CHECK (with retry loop)
     // ══════════════════════════════════════════════════════════════
+    // example pair for instruction pages 3 & 4
+    var exA = edges[0][0], exB = edges[0][1];
+    var exNameA  = nameMapping[exA],  exNameB  = nameMapping[exB];
+    var exImgA   = speciesImg(species[exA]),   exImgB   = speciesImg(species[exB]);
+    var exIconA  = behaviorIcon(behavior[exA], behaviorLabels);
+    var exIconB  = behaviorIcon(behavior[exB], behaviorLabels);
+    var exLabelA = behaviorLabels[behavior[exA]], exLabelB = behaviorLabels[behavior[exB]];
+
     var overviewPages = [
         // page 1: introduce gazorp species w/ images
         `<div class='content-box'>
@@ -177,16 +185,57 @@ function initStudy(graphData, condition) {
                 </div>
             </div>
         </div>`,
-        // page 3: what to pay attention to
+        // page 3: example pair — friends, no food yet
         `<div class='content-box'>
-            <p>You'll see pairs of gazorps on screen. Each pair of gazorps you see together are friends.</p>
-            <p>After a moment, you'll also see what each gazorp eats.</p>
-            <p><b>Pay close attention</b> to:</p>
-            <ul>
-                <li>Who is friends with whom</li>
-                <li>Whether each gazorp is blue or red</li>
-                <li>What each gazorp eats</li>
-            </ul>
+            <p>For each trial, you'll see a pair of gazorps. Each pair you see together are friends. For example:</p>
+            <div class='learning-box' style='box-shadow:none; border:1px solid #e8e8e8;'>
+                <div class='alien-pair'>
+                    <div class='alien-card'>
+                        <div class='alien-name'>${exNameA}</div>
+                        <div class='alien-img-wrap'>
+                            <img src='${exImgA}' class='alien-img'>
+                        </div>
+                        <div class='behavior-wrap'></div>
+                    </div>
+                    <div class='pair-connector'><div class='pair-line'></div></div>
+                    <div class='alien-card'>
+                        <div class='alien-name'>${exNameB}</div>
+                        <div class='alien-img-wrap'>
+                            <img src='${exImgB}' class='alien-img'>
+                        </div>
+                        <div class='behavior-wrap'></div>
+                    </div>
+                </div>
+            </div>
+        </div>`,
+        // page 4: same pair with food revealed
+        `<div class='content-box'>
+            <p>Underneath each gazorp, you'll also see what it eats. For example:</p>
+            <div class='learning-box' style='box-shadow:none; border:1px solid #e8e8e8;'>
+                <div class='alien-pair'>
+                    <div class='alien-card'>
+                        <div class='alien-name'>${exNameA}</div>
+                        <div class='alien-img-wrap'>
+                            <img src='${exImgA}' class='alien-img'>
+                        </div>
+                        <div class='behavior-wrap revealed'>
+                            <img src='${exIconA}' class='behavior-icon' alt='${exLabelA}'>
+                            <span class='behavior-label'>${exLabelA}</span>
+                        </div>
+                    </div>
+                    <div class='pair-connector'><div class='pair-line'></div></div>
+                    <div class='alien-card'>
+                        <div class='alien-name'>${exNameB}</div>
+                        <div class='alien-img-wrap'>
+                            <img src='${exImgB}' class='alien-img'>
+                        </div>
+                        <div class='behavior-wrap revealed'>
+                            <img src='${exIconB}' class='behavior-icon' alt='${exLabelB}'>
+                            <span class='behavior-label'>${exLabelB}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>`
     ];
 
@@ -603,21 +652,21 @@ function initStudy(graphData, condition) {
         phase1Instructions,
         readyToStart
     ]
-    .concat(learningBlock)
-    .concat([
-        phase1Done,
-        phase2Instructions,
-        edgeRecHeader
-    ])
-    .concat(edgeRecTrials)
-    .concat([speciesHeader])
-    .concat(speciesRecallTrials)
-    .concat([behaviorHeader])
-    .concat(behaviorRecallTrials)
-    .concat([
-        phase2Done,
-        phase3Instructions
-    ])
+    // .concat(learningBlock)
+    // .concat([
+    //     phase1Done,
+    //     phase2Instructions,
+    //     edgeRecHeader
+    // ])
+    // .concat(edgeRecTrials)
+    // .concat([speciesHeader])
+    // .concat(speciesRecallTrials)
+    // .concat([behaviorHeader])
+    // .concat(behaviorRecallTrials)
+    // .concat([
+    //     phase2Done,
+    //     phase3Instructions
+    // ])
     .concat(transferTrials)
     .concat([
         strategyTrial,
