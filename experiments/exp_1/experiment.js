@@ -652,21 +652,21 @@ function initStudy(graphData, condition) {
         phase1Instructions,
         readyToStart
     ]
-    // .concat(learningBlock)
-    // .concat([
-    //     phase1Done,
-    //     phase2Instructions,
-    //     edgeRecHeader
-    // ])
-    // .concat(edgeRecTrials)
-    // .concat([speciesHeader])
-    // .concat(speciesRecallTrials)
-    // .concat([behaviorHeader])
-    // .concat(behaviorRecallTrials)
-    // .concat([
-    //     phase2Done,
-    //     phase3Instructions
-    // ])
+    .concat(learningBlock)
+    .concat([
+        phase1Done,
+        phase2Instructions,
+        edgeRecHeader
+    ])
+    .concat(edgeRecTrials)
+    .concat([speciesHeader])
+    .concat(speciesRecallTrials)
+    .concat([behaviorHeader])
+    .concat(behaviorRecallTrials)
+    .concat([
+        phase2Done,
+        phase3Instructions
+    ])
     .concat(transferTrials)
     .concat([
         strategyTrial,
