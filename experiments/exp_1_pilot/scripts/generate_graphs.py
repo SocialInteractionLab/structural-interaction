@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
 """
-generate_graphs.py — produces NUM_GRAPHS canonical graph JSONs
-two conditions per graph: homophily (E→B) and category (C→B)
-outputs to exp_1/stimuli/graphs/
+generate_graphs.py (pilot) — homophily only, all gazorps same group
+outputs to exp_1_pilot/stimuli/graphs/
 """
 
 import numpy as np
@@ -20,19 +19,15 @@ N_EDGES      = 15        # exact number of edges required
 
 # stochastic block model params
 M    = 2                 # number of behavior communities
-K    = 2                 # number of group groups
 P_IN = 0.357             # within-community edge prob  (tuned for N_EDGES=15)
 P_OUT= 0.119             # between-community edge prob (tuned for N_EDGES=15)
 
-# correlation thresholds
-RHO_EB_MIN   = 0.15      # homophily cond: min ρ(E→B) — edge predicts behavior
-RHO_CB_MIN   = 0.15      # category cond:  min ρ(C→B) — group predicts behavior
-RHO_OTHER_MAX= 0.05      # max |ρ| for the non-signal cue in each condition
+# minimum ρ(E→B) for selecting graphs
+RHO_EB_MIN   = 0.15      # E=edge, B=behavior: min correlation (network proximity → shared food)
 
 # other selection criteria
-MIN_DEGREE         = 2
-group_BALANCE_MAX= 0.30   # max |mean_deg_s0 − mean_deg_s1| / mean_deg
-MAX_ATTEMPTS       = 50000
+MIN_DEGREE   = 2
+MAX_ATTEMPTS = 50000
 # ─────────────────────────────────────────────────────────────
 
 
@@ -46,11 +41,6 @@ def compute_rho_EB(A, B):
     if not se or not sn:
         return 0.0
     return float(np.mean(se) - np.mean(sn))
-
-
-def compute_rho_CB(C, B):
-    # ρ(C→B): P(group matches behavior) − 0.5
-    return float(np.mean([B[i] == C[i] for i in range(N)]) - 0.5)
 
 
 def try_make_graph(seed):
@@ -73,36 +63,11 @@ def try_make_graph(seed):
     if min(dict(G.degree()).values()) < MIN_DEGREE:    return None
     if edge_count != N_EDGES:                          return None
 
-    # homophily condition: behavior = latent, group = random (orthogonal)
     B_hom    = latent_B.copy()
-    group_pool = np.array([g for g in range(K) for _ in range(N // K)])
-    C_hom    = group_pool.copy()
-    rng.shuffle(C_hom)
-
-    rho_EB_hom = compute_rho_EB(A, B_hom)
-    rho_CB_hom = compute_rho_CB(C_hom, B_hom)
-    if rho_EB_hom < RHO_EB_MIN:                       return None
-    if abs(rho_CB_hom) > RHO_OTHER_MAX:               return None
-
-    # group balance check
-    deg      = np.array([int(A[i].sum()) for i in range(N)])
-    mean_deg = float(deg.mean())
-    if abs(deg[C_hom == 0].mean() - deg[C_hom == 1].mean()) / mean_deg > group_BALANCE_MAX:
+    C_hom    = np.zeros(N, dtype=int)   # all same group (all blue)
+    rho_EB   = compute_rho_EB(A, B_hom)
+    if rho_EB < RHO_EB_MIN:
         return None
-
-    # category condition: group = fresh shuffle, behavior derived from group
-    epsilon = float(np.clip(0.5 - rho_EB_hom, 0.0, 0.5))
-    C_cat   = group_pool.copy()
-    rng.shuffle(C_cat)
-    B_cat   = np.zeros(N, dtype=int)
-    for i in range(N):
-        k = C_cat[i]
-        B_cat[i] = k if rng.random() > epsilon else 1 - k
-
-    rho_CB_cat = compute_rho_CB(C_cat, B_cat)
-    rho_EB_cat = compute_rho_EB(A, B_cat)
-    if rho_CB_cat < RHO_CB_MIN:                       return None
-    if abs(rho_EB_cat) > RHO_OTHER_MAX:               return None
 
     edges     = [[int(i), int(j)] for i in range(N) for j in range(i+1, N) if A[i, j] == 1]
     non_edges = [[int(i), int(j)] for i in range(N) for j in range(i+1, N) if A[i, j] == 0]
@@ -116,43 +81,36 @@ def try_make_graph(seed):
     return {
         "graph_id": None,
         "seed": int(seed),
-        "N": N, "M": M, "K": K, "p_in": P_IN, "p_out": P_OUT,
+        "pilot": True,
+        "N": N, "M": M, "p_in": P_IN, "p_out": P_OUT,
         "adjacency": A.tolist(),
         "edges": edges,
         "homophily_condition": {
             "group":  C_hom.tolist(),
             "behavior": B_hom.tolist(),
-            "rho_EB":   round(rho_EB_hom, 4),
-            "rho_CB":   round(rho_CB_hom, 4)
+            "rho_EB":   round(rho_EB, 4),
+            "rho_CB":   0.0
         },
-        "category_condition": {
-            "group":  C_cat.tolist(),
-            "behavior": B_cat.tolist(),
-            "rho_EB":   round(rho_EB_cat, 4),
-            "rho_CB":   round(rho_CB_cat, 4)
-        },
-        "epsilon": round(epsilon, 4),
+        "category_condition": None,
+        "epsilon": None,
         "edge_recognition_trials": er_trials
     }
 
 
 # ── image generation ──────────────────────────────────────────
-# color = behavior (consistent across both panels)
-# shape = group: circle (0) vs square (1)
+# color = behavior; all nodes are circles (no group variation in pilot)
 BEH_COLORS = ['#f0a500', '#5b7fcb']   # behavior 0 / behavior 1
 
 NOTATION_KEY = (
     "Notation\n"
     "  E  =  edge (friendship)\n"
-    "  B  =  behavior (food pref)\n"
-    "  C  =  category\n\n"
+    "  B  =  behavior (food pref)\n\n"
     "  color  =  behavior (B)\n"
     "  shape  =  group (C)\n"
-    "    ●  group 0  (blue gazorp)\n"
-    "    ■  group 1  (red gazorp)\n\n"
+    "    ●  all group 0 (pilot:\n"
+    "       no category info)\n\n"
     "  ρ(E→B)  =  P(same B | friends)\n"
-    "            − P(same B | not friends)\n\n"
-    "  ρ(C→B)  =  P(C matches B) − 0.5"
+    "            − P(same B | not friends)"
 )
 
 
@@ -161,16 +119,11 @@ def draw_graph(ax, A, behavior, group, edge_list, title, info_lines):
     pos = nx.spring_layout(G, seed=42, k=1.8 / np.sqrt(N))
     nx.draw_networkx_edges(G, pos, edgelist=edge_list, ax=ax,
                            edge_color='#aaaaaa', width=1.4, alpha=0.7)
-
-    # draw circles (group=0) and squares (group=1) separately
-    for spe, shape in [(0, 'o'), (1, 's')]:
-        nodes = [i for i in range(N) if group[i] == spe]
-        if nodes:
-            nx.draw_networkx_nodes(G, pos, nodelist=nodes, ax=ax,
-                                   node_color=[BEH_COLORS[behavior[i]] for i in nodes],
-                                   node_shape=shape, node_size=460,
-                                   linewidths=1.2, edgecolors='#444')
-
+    # all circles in pilot (group all 0)
+    nx.draw_networkx_nodes(G, pos, ax=ax,
+                           node_color=[BEH_COLORS[b] for b in behavior],
+                           node_shape='o', node_size=460,
+                           linewidths=1.2, edgecolors='#444')
     nx.draw_networkx_labels(G, pos, ax=ax,
                             labels={i: str(i) for i in range(N)},
                             font_size=8, font_color='white', font_weight='bold')
@@ -185,39 +138,24 @@ def save_graph_image(g, out_dir):
     A     = np.array(g['adjacency'])
     edges = [(e[0], e[1]) for e in g['edges']]
     hom   = g['homophily_condition']
-    cat   = g['category_condition']
     gid   = g['graph_id']
 
-    fig, axes = plt.subplots(1, 3, figsize=(16, 5.5),
-                             gridspec_kw={'width_ratios': [2, 2, 1]})
+    fig, axes = plt.subplots(1, 2, figsize=(12, 5.5),
+                             gridspec_kw={'width_ratios': [2, 1]})
     fig.patch.set_facecolor('#fafafa')
 
-    # left: homophily condition
-    info_hom = [
+    info = [
         f"graph {gid:02d}  |  seed={g['seed']}  |  edges={len(edges)}",
         f"ρ(E→B) = {hom['rho_EB']:+.3f}",
-        f"ρ(C→B) = {hom['rho_CB']:+.3f}",
     ]
     draw_graph(axes[0], A, hom['behavior'], hom['group'],
-               edges, f"graph {gid:02d} — homophily cond", info_hom)
+               edges, f"graph {gid:02d} (pilot — homophily)", info)
+    axes[0].legend(handles=[mpatches.Patch(color=BEH_COLORS[i], label=f'behavior {i}')
+                             for i in range(2)],
+                   loc='upper right', fontsize=8, framealpha=0.85)
 
-    # middle: category condition
-    info_cat = [
-        f"ε = {g['epsilon']:.3f}",
-        f"ρ(C→B) = {cat['rho_CB']:+.3f}",
-        f"ρ(E→B) = {cat['rho_EB']:+.3f}",
-    ]
-    draw_graph(axes[1], A, cat['behavior'], cat['group'],
-               edges, f"graph {gid:02d} — category cond", info_cat)
-
-    # shared behavior legend
-    beh_legend = [mpatches.Patch(color=BEH_COLORS[i], label=f'behavior {i}') for i in range(2)]
-    axes[0].legend(handles=beh_legend, loc='upper right', fontsize=8, framealpha=0.85)
-    axes[1].legend(handles=beh_legend, loc='upper right', fontsize=8, framealpha=0.85)
-
-    # right: notation key
-    axes[2].axis('off')
-    axes[2].text(0.05, 0.95, NOTATION_KEY, transform=axes[2].transAxes,
+    axes[1].axis('off')
+    axes[1].text(0.05, 0.95, NOTATION_KEY, transform=axes[1].transAxes,
                  fontsize=9, verticalalignment='top', family='monospace',
                  color='#333', bbox=dict(boxstyle='round,pad=0.6', fc='#f0f0f0', ec='#bbb'))
 
@@ -240,13 +178,10 @@ while len(graphs) < NUM_GRAPHS and seed < MAX_ATTEMPTS:
         g["graph_id"] = len(graphs) + 1
         graphs.append(g)
         hom = g["homophily_condition"]
-        cat = g["category_condition"]
         print(
             f"graph {g['graph_id']:02d} | seed={seed:5d} | "
             f"edges={len(g['edges']):2d} | "
-            f"hom ρ(E→B)={hom['rho_EB']:+.3f} ρ(C→B)={hom['rho_CB']:+.3f} | "
-            f"cat ρ(C→B)={cat['rho_CB']:+.3f} ρ(E→B)={cat['rho_EB']:+.3f} | "
-            f"ε={g['epsilon']:.3f}"
+            f"ρ(E→B)={hom['rho_EB']:+.3f}"
         )
     seed += 1
 

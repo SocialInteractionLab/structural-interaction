@@ -1,11 +1,11 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Structural Interaction</title>
+    <title>Structural Interaction — Pilot</title>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <!-- jsPsych 8.1.0 — match norming_study version -->
+    <!-- jsPsych 8.1.0 -->
     <script src="https://unpkg.com/jspsych@8.1.0"></script>
     <script src="https://unpkg.com/@jspsych/plugin-instructions@2.0.1"></script>
     <script src="https://unpkg.com/@jspsych/plugin-html-button-response@2.0.0"></script>
@@ -13,22 +13,22 @@
     <!-- DataPipe -->
     <script src="https://unpkg.com/@jspsych-contrib/plugin-pipe"></script>
 
-    <!-- experiment config (first — defines constants) -->
+    <!-- pilot config (first — defines constants) -->
     <script src="config.js"></script>
 
-    <!-- components (order matters: utils before trials, trials before experiment) -->
-    <script src="components/utils.js"></script>
-    <script src="components/learning_trial.js"></script>
-    <script src="components/validation_trials.js"></script>
-    <script src="components/transfer_trial.js"></script>
-    <script src="components/demographics.js"></script>
+    <!-- shared components from exp_1 -->
+    <script src="../exp_1/components/utils.js"></script>
+    <script src="../exp_1/components/learning_trial.js"></script>
+    <script src="../exp_1/components/validation_trials.js"></script>
+    <script src="../exp_1/components/transfer_trial.js"></script>
+    <script src="../exp_1/components/demographics.js"></script>
 
-    <!-- main experiment -->
-    <script src="experiment.js"></script>
+    <!-- shared main experiment -->
+    <script src="../exp_1/experiment.js"></script>
 
-    <!-- styles -->
+    <!-- shared styles -->
     <link href="https://unpkg.com/jspsych@8.1.0/css/jspsych.css" rel="stylesheet">
-    <link href="css/style.css" rel="stylesheet">
+    <link href="../exp_1/css/style.css" rel="stylesheet">
 
     <script>
         window.onbeforeunload = function() {
@@ -36,8 +36,8 @@
         };
 
         window.onload = async function() {
-            // pick random condition and graph at landing
-            var condition   = Math.random() < 0.5 ? 'homophily' : 'category';
+            // pilot: homophily only, no category condition
+            var condition  = 'homophily';
             var graphId    = Math.floor(Math.random() * NUM_GRAPHS) + 1;
             var graphIdStr = String(graphId).padStart(2, '0');
 

@@ -1,7 +1,6 @@
 {
   "graph_id": 5,
   "seed": 45338,
-  "no_category": false,
   "N": 12,
   "M": 2,
   "K": 2,
@@ -240,7 +239,7 @@
     ]
   ],
   "homophily_condition": {
-    "species": [
+    "group": [
       1,
       0,
       1,
@@ -272,7 +271,7 @@
     "rho_CB": 0.0
   },
   "category_condition": {
-    "species": [
+    "group": [
       1,
       0,
       1,

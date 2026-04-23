@@ -1,10 +1,9 @@
 {
   "graph_id": 3,
   "seed": 2681,
-  "no_category": true,
+  "pilot": true,
   "N": 12,
   "M": 2,
-  "K": 2,
   "p_in": 0.357,
   "p_out": 0.119,
   "adjacency": [
@@ -240,7 +239,7 @@
     ]
   ],
   "homophily_condition": {
-    "species": [
+    "group": [
       0,
       0,
       0,

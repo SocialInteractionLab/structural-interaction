@@ -36,7 +36,7 @@ function initStudy(graphData, condition) {
     var condData = condition === 'homophily'
         ? graphData.homophily_condition
         : graphData.category_condition;
-    var species  = condData.species;   // array[12] of 0/1
+    var species  = condData.group;     // array[12] of 0/1
     var behavior = condData.behavior;  // array[12] of 0/1
     var edges    = graphData.edges;    // array of [i,j]
 
@@ -168,7 +168,6 @@ function initStudy(graphData, condition) {
                     <img src='stimuli/aliens/red_gazorp.png' style='width:120px; height:120px; object-fit:contain;'>
                 </div>
             </div>
-            <p>Some of the gazorps are <b>friends</b> with each other.</p>
         </div>`,
         // page 2: introduce the two foods w/ icons
         `<div class='content-box'>
