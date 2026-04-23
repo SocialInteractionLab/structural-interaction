@@ -18,7 +18,8 @@ N            = 12        # number of nodes (gazorps)
 N_EDGES      = 15        # exact number of edges required
 
 # stochastic block model params
-M    = 2                 # number of behavior communities
+M            = 2         # number of behavior communities
+N_PER_BEH    = 6         # nodes per behavior community (must satisfy M * N_PER_BEH == N)
 P_IN = 0.357             # within-community edge prob  (tuned for N_EDGES=15)
 P_OUT= 0.119             # between-community edge prob (tuned for N_EDGES=15)
 
@@ -46,7 +47,7 @@ def compute_rho_EB(A, B):
 def try_make_graph(seed):
     rng = np.random.default_rng(seed)
 
-    latent_B = np.array([b for b in range(M) for _ in range(N // M)])
+    latent_B = np.array([b for b in range(M) for _ in range(N_PER_BEH)])
     rng.shuffle(latent_B)
 
     A = np.zeros((N, N), dtype=int)
@@ -98,17 +99,20 @@ def try_make_graph(seed):
 
 
 # ── image generation ──────────────────────────────────────────
-# color = behavior; all nodes are circles (no group variation in pilot)
-BEH_COLORS = ['#f0a500', '#5b7fcb']   # behavior 0 / behavior 1
+# color = group (all blue gazorp in pilot); shape = behavior
+GRP_COLORS = ['#2596be', '#f14d4d']   # group 0 = blue gazorp / group 1 = red gazorp
 
 NOTATION_KEY = (
     "Notation\n"
     "  E  =  edge (friendship)\n"
-    "  B  =  behavior (food pref)\n\n"
-    "  color  =  behavior (B)\n"
-    "  shape  =  group (C)\n"
-    "    ●  all group 0 (pilot:\n"
-    "       no category info)\n\n"
+    "  B  =  behavior (food pref)\n"
+    "  C  =  category (group)\n\n"
+    "  color  =  group (C)\n"
+    "    all group 0 — pilot\n"
+    "    (no category info)\n"
+    "  shape  =  behavior (B)\n"
+    "    ●  behavior 0\n"
+    "    ■  behavior 1\n\n"
     "  ρ(E→B)  =  P(same B | friends)\n"
     "            − P(same B | not friends)"
 )
@@ -117,13 +121,23 @@ NOTATION_KEY = (
 def draw_graph(ax, A, behavior, group, edge_list, title, info_lines):
     G   = nx.from_numpy_array(A)
     pos = nx.spring_layout(G, seed=42, k=1.8 / np.sqrt(N))
+    # shift nodes into upper 80% of axes so bottom-left text box doesn't overlap
+    xs = np.array([p[0] for p in pos.values()])
+    ys = np.array([p[1] for p in pos.values()])
+    xs = (xs - xs.min()) / (xs.max() - xs.min() + 1e-9) * 0.85 + 0.05  # [0.05, 0.90]
+    ys = (ys - ys.min()) / (ys.max() - ys.min() + 1e-9) * 0.70 + 0.25  # [0.25, 0.95]
+    pos = {i: (xs[i], ys[i]) for i in pos}
+    ax.set_xlim(0, 1); ax.set_ylim(0, 1)
     nx.draw_networkx_edges(G, pos, edgelist=edge_list, ax=ax,
                            edge_color='#aaaaaa', width=1.4, alpha=0.7)
-    # all circles in pilot (group all 0)
-    nx.draw_networkx_nodes(G, pos, ax=ax,
-                           node_color=[BEH_COLORS[b] for b in behavior],
-                           node_shape='o', node_size=460,
-                           linewidths=1.2, edgecolors='#444')
+    # draw circles (behavior=0) and squares (behavior=1), colored by group
+    for beh, shape in [(0, 'o'), (1, 's')]:
+        nodes = [i for i in range(N) if behavior[i] == beh]
+        if nodes:
+            nx.draw_networkx_nodes(G, pos, nodelist=nodes, ax=ax,
+                                   node_color=[GRP_COLORS[group[i]] for i in nodes],
+                                   node_shape=shape, node_size=460,
+                                   linewidths=1.2, edgecolors='#444')
     nx.draw_networkx_labels(G, pos, ax=ax,
                             labels={i: str(i) for i in range(N)},
                             font_size=8, font_color='white', font_weight='bold')
@@ -150,7 +164,7 @@ def save_graph_image(g, out_dir):
     ]
     draw_graph(axes[0], A, hom['behavior'], hom['group'],
                edges, f"graph {gid:02d} (pilot — homophily)", info)
-    axes[0].legend(handles=[mpatches.Patch(color=BEH_COLORS[i], label=f'behavior {i}')
+    axes[0].legend(handles=[mpatches.Patch(color=GRP_COLORS[i], label=f'group {i}')
                              for i in range(2)],
                    loc='upper right', fontsize=8, framealpha=0.85)
 
