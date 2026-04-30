@@ -8,6 +8,7 @@ outputs to exp_1/stimuli/graphs/
 import numpy as np
 import networkx as nx
 import json, os
+from multiprocessing import Pool, cpu_count
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
@@ -15,26 +16,29 @@ import matplotlib.patches as mpatches
 
 # ── configurable ─────────────────────────────────────────────
 NUM_GRAPHS   = 5
-N            = 12        # number of nodes (gazorps)
-N_EDGES      = 15        # exact number of edges required
+N            = 8        # number of nodes (gazorps)
+N_EDGES      = 10       # exact number of edges required
 
 # stochastic block model params
 M            = 2         # number of behavior communities
-N_PER_BEH    = 6         # nodes per behavior community (must satisfy M * N_PER_BEH == N)
+N_PER_BEH    = 4        # nodes per behavior community (must satisfy M * N_PER_BEH == N)
 K            = 2         # number of groups
-N_PER_GROUP  = 6         # nodes per group (must satisfy K * N_PER_GROUP == N)
-P_IN = 0.357             # within-community edge prob  (tuned for N_EDGES=15)
-P_OUT= 0.119             # between-community edge prob (tuned for N_EDGES=15)
+N_PER_GROUP  = 4         # nodes per group (must satisfy K * N_PER_GROUP == N)
+P_IN = 0.58              # within-community edge prob  (tuned for N_EDGES=10, N=8)
+P_OUT= 0.19              # between-community edge prob (tuned for N_EDGES=10, N=8)
 
 # correlation thresholds
 RHO_EB_MIN   = 0.4     # homophily cond: min ρ(E→B) — edge predicts behavior
 RHO_CB_MIN   = 0.4      # category cond:  min ρ(C→B) — group predicts behavior
-RHO_OTHER_MAX= 0.015      # max |ρ| for the non-signal cue in each condition
+RHO_OTHER_MAX= 0.05      # max |ρ| for the non-signal cue in each condition
+                         # 0.05 is the practical floor for N=8, E=10:
+                         #   rho_CB_hom = 0 is achievable (x=2 overlap)
+                         #   min |rho_EB_cat| = 0.044 (k=4 same-beh edges)
 
 # other selection criteria
 MIN_DEGREE         = 2
 group_BALANCE_MAX= 0.30   # max |mean_deg_s0 − mean_deg_s1| / mean_deg
-MAX_ATTEMPTS       = 500000000
+MAX_ATTEMPTS       = 5000000
 # ─────────────────────────────────────────────────────────────
 
 
@@ -102,7 +106,7 @@ def try_make_graph(seed):
     flips   = rng.random(N) < epsilon
     B_cat   = np.where(flips, 1 - C_cat, C_cat).astype(int)
 
-    if np.sum(B_cat == 0) != N_PER_BEH:               return None   # enforce 6/6 balance
+    if np.sum(B_cat == 0) != N_PER_BEH:               return None   # enforce 4/4 balance
     rho_CB_cat = compute_rho_CB(C_cat, B_cat)
     if rho_CB_cat < RHO_CB_MIN:                       return None
     rho_EB_cat = compute_rho_EB(A, B_cat)
@@ -242,35 +246,42 @@ def save_graph_image(g, out_dir):
 
 
 # ── main ──────────────────────────────────────────────────────
-out_dir = os.path.join(os.path.dirname(__file__), '..', 'stimuli', 'graphs')
-os.makedirs(out_dir, exist_ok=True)
+if __name__ == '__main__':
+    out_dir = os.path.join(os.path.dirname(__file__), '..', 'stimuli', 'graphs')
+    os.makedirs(out_dir, exist_ok=True)
 
-graphs = []
-seed   = 0
-while len(graphs) < NUM_GRAPHS and seed < MAX_ATTEMPTS:
-    g = try_make_graph(seed)
-    if g is not None:
-        g["graph_id"] = len(graphs) + 1
-        graphs.append(g)
-        hom = g["homophily_condition"]
-        cat = g["category_condition"]
-        print(
-            f"graph {g['graph_id']:02d} | seed={seed:5d} | "
-            f"edges={len(g['edges']):2d} | "
-            f"hom ρ(E→B)={hom['rho_EB']:+.3f} ρ(C→B)={hom['rho_CB']:+.3f} | "
-            f"cat ρ(C→B)={cat['rho_CB']:+.3f} ρ(E→B)={cat['rho_EB']:+.3f} | "
-            f"ε={g['epsilon']:.3f}"
-        )
-    seed += 1
+    BATCH = 4096   # seeds per parallel chunk
 
-if len(graphs) < NUM_GRAPHS:
-    print(f"\nWARNING: only found {len(graphs)}/{NUM_GRAPHS} valid graphs in {seed} attempts")
-else:
-    print(f"\nfound all {NUM_GRAPHS} graphs in {seed} attempts")
+    graphs = []
+    seed   = 0
+    with Pool(cpu_count()) as pool:
+        while len(graphs) < NUM_GRAPHS and seed < MAX_ATTEMPTS:
+            batch_seeds = range(seed, min(seed + BATCH, MAX_ATTEMPTS))
+            results = pool.map(try_make_graph, batch_seeds)
+            for i, g in enumerate(results):
+                if g is not None and len(graphs) < NUM_GRAPHS:
+                    g["graph_id"] = len(graphs) + 1
+                    graphs.append(g)
+                    hom = g["homophily_condition"]
+                    cat = g["category_condition"]
+                    print(
+                        f"graph {g['graph_id']:02d} | seed={seed+i:5d} | "
+                        f"edges={len(g['edges']):2d} | "
+                        f"hom ρ(E→B)={hom['rho_EB']:+.3f} ρ(C→B)={hom['rho_CB']:+.3f} | "
+                        f"cat ρ(C→B)={cat['rho_CB']:+.3f} ρ(E→B)={cat['rho_EB']:+.3f} | "
+                        f"ε={g['epsilon']:.3f}"
+                    )
+            seed += BATCH
 
-for g in graphs:
-    path = os.path.join(out_dir, f"graph_{g['graph_id']:02d}.json")
-    with open(path, 'w') as f:
-        json.dump(g, f, indent=2)
-    print(f"saved {path}")
-    save_graph_image(g, out_dir)
+    total_checked = min(seed, MAX_ATTEMPTS)
+    if len(graphs) < NUM_GRAPHS:
+        print(f"\nWARNING: only found {len(graphs)}/{NUM_GRAPHS} valid graphs in {total_checked} attempts")
+    else:
+        print(f"\nfound all {NUM_GRAPHS} graphs in ~{total_checked} attempts")
+
+    for g in graphs:
+        path = os.path.join(out_dir, f"graph_{g['graph_id']:02d}.json")
+        with open(path, 'w') as f:
+            json.dump(g, f, indent=2)
+        print(f"saved {path}")
+        save_graph_image(g, out_dir)

@@ -106,8 +106,9 @@ function applyProductionProtections(jsPsych) {
 }
 
 // image path helpers
-function speciesImg(speciesInt) {
-    return speciesInt === 0 ? 'stimuli/aliens/blue_gazorp.png' : 'stimuli/aliens/red_gazorp.png';
+function speciesImg(nodeIdx, speciesInt) {
+    var color = speciesInt === 0 ? 'green' : 'orange';
+    return `stimuli/aliens/alien_${nodeIdx + 1}_${color}.png`;
 }
 function behaviorIcon(behaviorInt, behaviorLabels) {
     return behaviorLabels[behaviorInt] === 'glorp' ? 'stimuli/food/glorp.svg' : 'stimuli/food/flim.svg';

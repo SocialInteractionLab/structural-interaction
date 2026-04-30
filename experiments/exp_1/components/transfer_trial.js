@@ -35,7 +35,9 @@ function buildTransferTrials(opts, jsPsych) {
 
     return shuffledTransferNames.map(function(novelName, trialIdx) {
         var novelSpecies = speciesAssignments[trialIdx];
-        var speciesLabel = novelSpecies === 0 ? 'blue gazorp' : 'red gazorp';
+        var speciesLabel = novelSpecies === 0 ? 'green alien' : 'orange alien';
+        var alienDesignIdx = opts.transferAlienIndices[trialIdx];  // which of the 8 designs to show
+        var alienColor = novelSpecies === 0 ? 'green' : 'orange';
         var friendNodes  = sampleFriends(novelSpecies);
         var gt           = groundTruth(novelSpecies, friendNodes);
         var icon0        = behaviorIcon(0, bLabels);
@@ -47,16 +49,16 @@ function buildTransferTrials(opts, jsPsych) {
 
                 <!-- intro + cue choice: always visible -->
                 <div style='text-align:center; margin-bottom:16px;'>
-                    <img src='stimuli/aliens/blue_gazorp.png' style='width:100px; filter:grayscale(100%);'>
-                    <div style='font-size:22px; font-weight:700; margin-top:8px;'>${novelName}</div>
+                    <img src='stimuli/aliens/alien_${alienDesignIdx + 1}_green.png' style='width:100px; filter:grayscale(100%);'>
+                    <!-- <div style='font-size:22px; font-weight:700; margin-top:8px;'>${novelName}</div> -->
                 </div>
                 <p class='transfer-prompt'>
-                    ${novelName} has <b>${TRANSFER_FRIENDS_REVEALED} friends</b> among the gazorps you learned about.<br>
-                    To predict what ${novelName} eats, you can learn <u>one thing</u>:
+                    This new alien has <b>${TRANSFER_FRIENDS_REVEALED} friends</b> among the aliens you learned about.<br>
+                    To predict what it eats, you can learn <u>one thing</u>:
                 </p>
                 <div class='cue-choice-row' id='t-cue-choice'>
                     <button class='cue-btn' id='btn-species'>
-                        Learn whether ${novelName} is a<br>blue or red gazorp
+                        Learn whether this alien is<br><span style='color:#1fb092; font-weight:600;'>green</span> or <span style='color:#ee5e33; font-weight:600;'>orange</span>
                     </button>
                     <button class='cue-btn' id='btn-friends'>
                         Learn who ${novelName}'s<br>friends are
@@ -73,7 +75,7 @@ function buildTransferTrials(opts, jsPsych) {
 
                 <!-- prediction: hidden until continue -->
                 <div id='t-prediction' style='display:none; margin-top:28px;'>
-                    <p class='transfer-prompt'>What does <b>${novelName}</b> eat?</p>
+                    <p class='transfer-prompt'>What does this alien eat?</p>
                     <div class='prediction-row'>
                         <button class='pred-btn food-btn' id='pred-0'>
                             <img src='${icon0}' class='food-btn-icon'>${bLabels[0]}
@@ -152,23 +154,23 @@ function buildTransferTrials(opts, jsPsych) {
                         trialRecord.revealed_info_summary = speciesLabel;
                         revealEl.innerHTML = `
                             <div class='reveal-center'>
-                                <p style='font-size:17px; color:#555;'>${novelName} is a:</p>
+                                <p style='font-size:17px; color:#555;'>This alien is:</p>
                                 <div style='text-align:center;'>
-                                    <img src='${speciesImg(novelSpecies)}' class='alien-img' style='width:120px;height:120px;'>
-                                    <div style='font-size:17px; font-weight:600; margin-top:6px;'>${speciesLabel}</div>
+                                    <img src='stimuli/aliens/alien_${alienDesignIdx + 1}_${alienColor}.png' class='alien-img' style='width:120px;height:120px;'>
+                                    <div style='font-size:17px; font-weight:600; margin-top:6px; color:${novelSpecies === 0 ? '#1fb092' : '#ee5e33'};'>${speciesLabel}</div>
                                 </div>
                             </div>`;
                     } else {
                         trialRecord.revealed_info_summary = friendNodes.map(n => nameMap[n]).join(', ');
                         var friendCards = friendNodes.map(function(n) {
                             var fname  = nameMap[n];
-                            var fimg   = speciesImg(speciesArr[n]);
+                            var fimg   = speciesImg(n, speciesArr[n]);
                             var ficon  = behaviorIcon(behaviorArr[n], bLabels);
                             var flabel = bLabels[behaviorArr[n]];
                             return `
                                 <div class='friend-card'>
                                     <img src='${fimg}' class='alien-img' style='width:80px;height:80px;'>
-                                    <div class='friend-name'>${fname}</div>
+                                    <!-- <div class='friend-name'>${fname}</div> -->
                                     <div class='friend-info'>
                                         <img src='${ficon}' alt='${flabel}'>${flabel}
                                     </div>
@@ -176,7 +178,7 @@ function buildTransferTrials(opts, jsPsych) {
                         }).join('');
                         revealEl.innerHTML = `
                             <div class='reveal-center'>
-                                <p style='font-size:17px; color:#555; margin-bottom:4px;'>${novelName}'s friends:</p>
+                                <p style='font-size:17px; color:#555; margin-bottom:4px;'>This alien's friends:</p>
                                 <div class='friends-grid'>${friendCards}</div>
                             </div>`;
                     }

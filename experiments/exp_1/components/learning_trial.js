@@ -6,7 +6,7 @@ function buildLearningTrial(opts, jsPsych) {
     var nameA = opts.nameMapping[nodeA], nameB = opts.nameMapping[nodeB];
     var speciesA = opts.species[nodeA], speciesB = opts.species[nodeB];
     var behA    = opts.behavior[nodeA], behB    = opts.behavior[nodeB];
-    var imgA    = speciesImg(speciesA), imgB    = speciesImg(speciesB);
+    var imgA    = speciesImg(nodeA, speciesA), imgB    = speciesImg(nodeB, speciesB);
     var iconA   = behaviorIcon(behA, opts.behaviorLabels);
     var iconB   = behaviorIcon(behB, opts.behaviorLabels);
     var labelA  = opts.behaviorLabels[behA], labelB = opts.behaviorLabels[behB];
@@ -17,9 +17,9 @@ function buildLearningTrial(opts, jsPsych) {
         <div class='learning-box'>
             <div class='alien-pair'>
                 <div class='alien-card'>
-                    <div class='alien-name'>${nameA}</div>
+                    <!-- <div class='alien-name'>${nameA}</div> -->
                     <div class='alien-img-wrap ${rotA ? 'upside-down' : ''}'>
-                        <img src='${imgA}' class='alien-img' alt='${nameA}'>
+                        <img src='${imgA}' class='alien-img' alt=''>
                     </div>
                     <div class='behavior-wrap' id='bwrap-a'>
                         <img src='${iconA}' class='behavior-icon' alt='${labelA}'>
@@ -28,9 +28,9 @@ function buildLearningTrial(opts, jsPsych) {
                 </div>
                 <div class='pair-connector'><div class='pair-line'></div></div>
                 <div class='alien-card'>
-                    <div class='alien-name'>${nameB}</div>
+                    <!-- <div class='alien-name'>${nameB}</div> -->
                     <div class='alien-img-wrap ${rotB ? 'upside-down' : ''}'>
-                        <img src='${imgB}' class='alien-img' alt='${nameB}'>
+                        <img src='${imgB}' class='alien-img' alt=''>
                     </div>
                     <div class='behavior-wrap' id='bwrap-b'>
                         <img src='${iconB}' class='behavior-icon' alt='${labelB}'>

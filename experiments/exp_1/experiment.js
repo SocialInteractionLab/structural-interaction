@@ -36,8 +36,8 @@ function initStudy(graphData, condition) {
     var condData = condition === 'homophily'
         ? graphData.homophily_condition
         : graphData.category_condition;
-    var species  = condData.group;     // array[12] of 0/1
-    var behavior = condData.behavior;  // array[12] of 0/1
+    var species  = condData.group;     // array[8] of 0/1
+    var behavior = condData.behavior;  // array[8] of 0/1
     var edges    = graphData.edges;    // array of [i,j]
 
     // random name assignment: shuffle learning names, assign to nodes 0-11
@@ -72,12 +72,12 @@ function initStudy(graphData, condition) {
             graph_id:               graphData.graph_id,
             graph_seed:             graphData.seed,
             alien_image_mapping:    Object.fromEntries(Object.entries(nameMapping).map(
-                ([node, name]) => [name, speciesImg(species[node])]
+                ([node, name]) => [name, speciesImg(parseInt(node), species[node])]
             )),
             name_mapping:           Object.fromEntries(Object.entries(nameMapping).map(
                 ([node, name]) => [`node_${node}`, name]
             )),
-            species_label_mapping:  { 0: 'blue gazorp', 1: 'red gazorp' },
+            species_label_mapping:  { 0: 'green alien', 1: 'orange alien' },
             behavior_label_mapping: behaviorLabels
         },
         phase_1_learning: { trials: [], attention_check_hit_rate: 0 },
@@ -149,29 +149,29 @@ function initStudy(graphData, condition) {
     // example pair for instruction pages 3 & 4
     var exA = edges[0][0], exB = edges[0][1];
     var exNameA  = nameMapping[exA],  exNameB  = nameMapping[exB];
-    var exImgA   = speciesImg(species[exA]),   exImgB   = speciesImg(species[exB]);
+    var exImgA   = speciesImg(exA, species[exA]),   exImgB   = speciesImg(exB, species[exB]);
     var exIconA  = behaviorIcon(behavior[exA], behaviorLabels);
     var exIconB  = behaviorIcon(behavior[exB], behaviorLabels);
     var exLabelA = behaviorLabels[behavior[exA]], exLabelB = behaviorLabels[behavior[exB]];
 
     var overviewPages = [
-        // page 1: introduce gazorp species w/ images
+        // page 1: introduce alien species w/ images
         `<div class='content-box'>
-            <p>On an island called <b>dude</b>, there are 12 aliens called <b>gazorps</b>.</p>
-            <p>Each gazorp is either a <span style='color:#2596be; font-weight:600;'>blue gazorp</span> or a <span style='color:#f14d4d; font-weight:600;'>red gazorp</span>:</p>
+            <p>On an island called <b>dude</b>, there are 8 aliens.</p>
+            <p>Each alien is either <span style='color:#1fb092; font-weight:600;'>green</span> or <span style='color:#ee5e33; font-weight:600;'>orange</span>:</p>
             <div style='display:flex; justify-content:center; align-items:center; gap:32px; margin:24px 0;'>
                 <div style='text-align:center;'>
-                    <img src='stimuli/aliens/blue_gazorp.png' style='width:120px; height:120px; object-fit:contain;'>
+                    <img src='stimuli/aliens/alien_1_green.png' style='width:120px; height:120px; object-fit:contain;'>
                 </div>
                 <div style='color:#555; font-size:18px; font-weight:600;'>or</div>
                 <div style='text-align:center;'>
-                    <img src='stimuli/aliens/red_gazorp.png' style='width:120px; height:120px; object-fit:contain;'>
+                    <img src='stimuli/aliens/alien_1_orange.png' style='width:120px; height:120px; object-fit:contain;'>
                 </div>
             </div>
         </div>`,
         // page 2: introduce the two foods w/ icons
         `<div class='content-box'>
-            <p>Each gazorp eats one of two foods:</p>
+            <p>Each alien eats one of two foods:</p>
             <div style='display:flex; justify-content:center; align-items:center; gap:32px; margin:24px 0;'>
                 <div style='text-align:center;'>
                     <img src='stimuli/food/glorp.svg' style='width:80px; height:80px; object-fit:contain;'>
@@ -186,11 +186,11 @@ function initStudy(graphData, condition) {
         </div>`,
         // page 3: example pair — friends, no food yet
         `<div class='content-box'>
-            <p>For each trial, you'll see a pair of gazorps. Each pair you see together are friends. For example:</p>
+            <p>For each trial, you'll see a pair of aliens. Each pair you see together are friends. For example:</p>
             <div class='learning-box' style='box-shadow:none; border:1px solid #e8e8e8;'>
                 <div class='alien-pair'>
                     <div class='alien-card'>
-                        <div class='alien-name'>${exNameA}</div>
+                        <!-- <div class='alien-name'>${exNameA}</div> -->
                         <div class='alien-img-wrap'>
                             <img src='${exImgA}' class='alien-img'>
                         </div>
@@ -198,7 +198,7 @@ function initStudy(graphData, condition) {
                     </div>
                     <div class='pair-connector'><div class='pair-line'></div></div>
                     <div class='alien-card'>
-                        <div class='alien-name'>${exNameB}</div>
+                        <!-- <div class='alien-name'>${exNameB}</div> -->
                         <div class='alien-img-wrap'>
                             <img src='${exImgB}' class='alien-img'>
                         </div>
@@ -209,11 +209,11 @@ function initStudy(graphData, condition) {
         </div>`,
         // page 4: same pair with food revealed
         `<div class='content-box'>
-            <p>Underneath each gazorp, you'll also see what it eats. For example:</p>
+            <p>Underneath each alien, you'll also see what it eats. For example:</p>
             <div class='learning-box' style='box-shadow:none; border:1px solid #e8e8e8;'>
                 <div class='alien-pair'>
                     <div class='alien-card'>
-                        <div class='alien-name'>${exNameA}</div>
+                        <!-- <div class='alien-name'>${exNameA}</div> -->
                         <div class='alien-img-wrap'>
                             <img src='${exImgA}' class='alien-img'>
                         </div>
@@ -224,7 +224,7 @@ function initStudy(graphData, condition) {
                     </div>
                     <div class='pair-connector'><div class='pair-line'></div></div>
                     <div class='alien-card'>
-                        <div class='alien-name'>${exNameB}</div>
+                        <!-- <div class='alien-name'>${exNameB}</div> -->
                         <div class='alien-img-wrap'>
                             <img src='${exImgB}' class='alien-img'>
                         </div>
@@ -261,24 +261,24 @@ function initStudy(graphData, condition) {
             var container = document.querySelector('#jspsych-content');
             container.innerHTML = `
                 <div class='content-box prevent-select' style='max-width:700px; text-align:left;'>
-                    <p><b>1. When two gazorps appear together on screen, that means...</b></p>
+                    <p><b>1. When two aliens appear together on screen, that means...</b></p>
                     <div style='margin-left:20px; text-align:left;'>
                         <label style='display:block; margin-bottom:6px;'><input type='radio' name='q1' value='friends'> They are friends</label>
                         <label style='display:block; margin-bottom:6px;'><input type='radio' name='q1' value='same_color'> They are the same color</label>
                         <label style='display:block; margin-bottom:6px;'><input type='radio' name='q1' value='same_food'> They eat the same food</label>
                     </div>
 
-                    <p style='margin-top:20px;'><b>2. Which of the following are <b>NOT</b> one of the food items that the gazorps eat?</b></p>
+                    <p style='margin-top:20px;'><b>2. Which of the following are <b>NOT</b> one of the food items that the aliens eat?</b></p>
                     <div style='margin-left:20px; text-align:left;'>
                         <label style='display:block; margin-bottom:6px;'><input type='radio' name='q2' value='Bubba'>Bubba</label>
                         <label style='display:block; margin-bottom:6px;'><input type='radio' name='q2' value='Glorp'>Glorp</label>
                         <label style='display:block; margin-bottom:6px;'><input type='radio' name='q2' value='Flim'>Flim</label>
                     </div>
 
-                    <p style='margin-top:20px;'><b>3. How many gazorps will you learn about?</b></p>
+                    <p style='margin-top:20px;'><b>3. How many aliens will you learn about?</b></p>
                     <div style='margin-left:20px; text-align:left;'>
-                        <label style='display:block; margin-bottom:6px;'><input type='radio' name='q3' value='6'> 6</label>
-                        <label style='display:block; margin-bottom:6px;'><input type='radio' name='q3' value='12'> 12</label>
+                        <label style='display:block; margin-bottom:6px;'><input type='radio' name='q3' value='4'> 4</label>
+                        <label style='display:block; margin-bottom:6px;'><input type='radio' name='q3' value='8'> 8</label>
                         <label style='display:block; margin-bottom:6px;'><input type='radio' name='q3' value='20'> 20</label>
                     </div>
 
@@ -302,7 +302,7 @@ function initStudy(graphData, condition) {
                     return;
                 }
 
-                var correct = q1.value === 'friends' && q2.value === 'Bubba' && q3.value === '12';
+                var correct = q1.value === 'friends' && q2.value === 'Bubba' && q3.value === '8';
                 if (!correct) {
                     compRetries++;
                     sessionData.attention_flags.failed_comprehension_retries = compRetries;
@@ -344,7 +344,7 @@ function initStudy(graphData, condition) {
         type: jsPsychInstructions,
         pages: [`
             <div class='content-box'>
-                <p>⚠️ Sometimes a gazorp will appear <b>upside-down</b> ⚠️</p>
+                <p>⚠️ Sometimes an alien will appear <b>upside-down</b> ⚠️</p>
                 <p>When that happens, press the <b>SPACEBAR</b> right away.</p>
             </div>`],
         show_clickable_nav: true,
@@ -418,9 +418,9 @@ function initStudy(graphData, condition) {
             <div class='content-box'>
                 <p>Now we'll check what you remember. You'll answer three sets of questions:</p>
                 <ul>
-                    <li>Which gazorps were friends?</li>
-                    <li>Is each gazorp blue or red?</li>
-                    <li>What does each gazorp eat?</li>
+                    <li>Which aliens were friends?</li>
+                    <li>Is each alien green or orange?</li>
+                    <li>What does each alien eat?</li>
                 </ul>
                 <p>No feedback will be given. Just do your best.</p>
             </div>`],
@@ -435,7 +435,7 @@ function initStudy(graphData, condition) {
         type: jsPsychHtmlButtonResponse,
         stimulus: `
             <div class='content-box' style='text-align:center;'>
-                <p style='font-size:17px; color:#555;'>Part 1 of 3: Were these two gazorps friends?</p>
+                <p style='font-size:17px; color:#555;'>Part 1 of 3: Were these two aliens friends?</p>
             </div>`,
         choices: ['Start']
     };
@@ -448,7 +448,7 @@ function initStudy(graphData, condition) {
         type: jsPsychHtmlButtonResponse,
         stimulus: `
             <div class='content-box' style='text-align:center;'>
-                <p style='font-size:17px; color:#555;'>Part 2 of 3: Is each gazorp blue or red?</p>
+                <p style='font-size:17px; color:#555;'>Part 2 of 3: Is each alien green or orange?</p>
             </div>`,
         choices: ['Start']
     };
@@ -461,7 +461,7 @@ function initStudy(graphData, condition) {
         type: jsPsychHtmlButtonResponse,
         stimulus: `
             <div class='content-box' style='text-align:center;'>
-                <p style='font-size:17px; color:#555;'>Part 3 of 3: What does each gazorp eat?</p>
+                <p style='font-size:17px; color:#555;'>Part 3 of 3: What does each alien eat?</p>
             </div>`,
         choices: ['Start']
     };
@@ -475,7 +475,7 @@ function initStudy(graphData, condition) {
         type: jsPsychHtmlButtonResponse,
         stimulus: `
             <div class='content-box' style='text-align:center;'>
-                <p style='font-size:18px; color:#555;'>Memory check complete. Next up: 5 new gazorps.</p>
+                <p style='font-size:18px; color:#555;'>Memory check complete. Next up: 5 new aliens.</p>
             </div>`,
         choices: ['Continue'],
         on_load: function() {
@@ -501,10 +501,10 @@ function initStudy(graphData, condition) {
         type: jsPsychInstructions,
         pages: [`
             <div class='content-box'>
-                <p>You'll now meet <b>5 new gazorps</b> you haven't seen before.</p>
+                <p>You'll now meet <b>5 new aliens</b> you haven't seen before.</p>
                 <p>For each one, you can reveal <b>one thing</b> to help you determine what they like to eat:</p>
                 <ul>
-                    <li>Whether they're a blue or red gazorp, <b>or</b></li>
+                    <li>Whether they're green or orange, <b>or</b></li>
                     <li>Who their friends are</li>
                 </ul>
                 <p>Then you'll make a prediction and rate how confident you are.</p>
@@ -516,9 +516,12 @@ function initStudy(graphData, condition) {
         on_page_change: function() { lockInstructionsNext(5); }
     };
 
+    // random alien designs for the 5 transfer aliens (greyed out)
+    var transferAlienIndices = jsPsych.randomization.sampleWithoutReplacement([0,1,2,3,4,5,6,7], 5);
+
     var transferTrials = buildTransferTrials({
         condition, species, behavior, nameMapping, behaviorLabels,
-        graphData, sessionData
+        graphData, sessionData, transferAlienIndices
     }, jsPsych);
 
 
