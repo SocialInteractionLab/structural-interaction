@@ -61,7 +61,7 @@ function buildTransferTrials(opts, jsPsych) {
                         Learn whether this alien is<br><span style='color:#1fb092; font-weight:600;'>green</span> or <span style='color:#ee5e33; font-weight:600;'>orange</span>
                     </button>
                     <button class='cue-btn' id='btn-friends'>
-                        Learn who ${novelName}'s<br>friends are
+                        Learn who this alien's<br>friends are
                     </button>
                 </div>
 
@@ -154,7 +154,7 @@ function buildTransferTrials(opts, jsPsych) {
                         trialRecord.revealed_info_summary = speciesLabel;
                         revealEl.innerHTML = `
                             <div class='reveal-center'>
-                                <p style='font-size:17px; color:#555;'>This alien is:</p>
+                                <p style='font-size:17px; color:#555;'>This alien is a:</p>
                                 <div style='text-align:center;'>
                                     <img src='stimuli/aliens/alien_${alienDesignIdx + 1}_${alienColor}.png' class='alien-img' style='width:120px;height:120px;'>
                                     <div style='font-size:17px; font-weight:600; margin-top:6px; color:${novelSpecies === 0 ? '#1fb092' : '#ee5e33'};'>${speciesLabel}</div>

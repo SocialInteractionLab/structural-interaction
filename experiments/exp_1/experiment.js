@@ -2,6 +2,59 @@
 function initStudy(graphData, condition) {
     if (checkMobile()) return;
 
+    // ── dev toolbar (testing mode only) ───────────────────────────
+    if (TESTING_MODE) {
+        window._devGraphData = graphData;
+        window._devCondition  = condition;
+    }
+    var _devStart = (TESTING_MODE && window._devStartPhase != null) ? window._devStartPhase : 0;
+
+    if (TESTING_MODE) {
+        var _toolbar = document.getElementById('dev-toolbar');
+        if (!_toolbar) {
+            _toolbar = document.createElement('div');
+            _toolbar.id = 'dev-toolbar';
+            document.body.appendChild(_toolbar);
+        }
+        _toolbar.innerHTML = `
+            <div style='display:flex; align-items:center; gap:10px; padding:5px 12px;
+                background:#1a1a1a; color:#eee; font-family:monospace; font-size:12px;
+                border-bottom:2px solid #ee5e33;'>
+                <span style='color:#ee5e33; font-weight:bold; letter-spacing:1px;'>DEV</span>
+                <label style='color:#aaa;'>jump to:</label>
+                <select id='dev-phase-select' style='background:#2d2d2d; color:#eee;
+                    border:1px solid #555; padding:2px 6px; border-radius:3px; font-family:monospace; font-size:12px;'>
+                    <option value='0'>Full run</option>
+                    <option value='1'>Instructions</option>
+                    <option value='2'>Phase 1 — Learning</option>
+                    <option value='3'>Phase 2 — Validation</option>
+                    <option value='4'>Phase 3 — Transfer</option>
+                    <option value='5'>Phase 4 — Strategy</option>
+                    <option value='6'>Phase 5 — Demographics</option>
+                </select>
+                <button id='dev-jump-btn' style='background:#333; color:#eee; border:1px solid #666;
+                    padding:2px 10px; border-radius:3px; cursor:pointer; font-family:monospace; font-size:12px;'>
+                    ↩ restart
+                </button>
+                <span style='color:#666; margin-left:6px;'>
+                    cond: <span style='color:#1fb092;'>${condition}</span>
+                    &nbsp;|&nbsp; graph: <span style='color:#1fb092;'>${graphData.graph_id}</span>
+                </span>
+            </div>`;
+        document.getElementById('dev-phase-select').value = String(_devStart);
+        document.getElementById('dev-jump-btn').addEventListener('click', function() {
+            var target = parseInt(document.getElementById('dev-phase-select').value);
+            window._devStartPhase = target;
+            // clear everything except the toolbar, then reinit
+            Array.from(document.body.children).forEach(function(c) {
+                if (c.id !== 'dev-toolbar') c.remove();
+            });
+            initStudy(window._devGraphData, window._devCondition);
+        });
+        // push body content below toolbar so nothing is hidden behind it
+        document.body.style.paddingTop = '32px';
+    }
+
     var urlParams  = new URLSearchParams(window.location.search);
     var prolificID = urlParams.get('PROLIFIC_PID') || '';
     var studyID    = urlParams.get('STUDY_ID')     || '';
@@ -647,35 +700,47 @@ function initStudy(graphData, condition) {
     });
 
 
-    // ── full timeline ─────────────────────────────────────────────
+    // ── full timeline (conditional blocks for dev jump support) ──────
+    // _devStart: 0=full, 1=instructions, 2=ph1, 3=ph2, 4=ph3, 5=ph4, 6=ph5
+    // each block runs when its order >= _devStart
     var timeline = [
-        consent,
-        comprehensionLoop,
-        phase1Instructions,
-        readyToStart
-    ]
-    .concat(learningBlock)
-    .concat([
-        phase1Done,
-        phase2Instructions,
-        edgeRecHeader
-    ])
-    .concat(edgeRecTrials)
-    .concat([speciesHeader])
-    .concat(speciesRecallTrials)
-    .concat([behaviorHeader])
-    .concat(behaviorRecallTrials)
-    .concat([
-        phase2Done,
-        phase3Instructions
-    ])
-    .concat(transferTrials)
-    .concat([
-        strategyTrial,
-        demographicsTrial,
+        {
+            timeline: [consent],
+            conditional_function: function() { return _devStart <= 0; }
+        },
+        {
+            timeline: [comprehensionLoop],
+            conditional_function: function() { return _devStart <= 1; }
+        },
+        {
+            timeline: [phase1Instructions, readyToStart].concat(learningBlock).concat([phase1Done]),
+            conditional_function: function() { return _devStart <= 2; }
+        },
+        {
+            timeline: [phase2Instructions, edgeRecHeader]
+                .concat(edgeRecTrials)
+                .concat([speciesHeader])
+                .concat(speciesRecallTrials)
+                .concat([behaviorHeader])
+                .concat(behaviorRecallTrials)
+                .concat([phase2Done]),
+            conditional_function: function() { return _devStart <= 3; }
+        },
+        {
+            timeline: [phase3Instructions].concat(transferTrials),
+            conditional_function: function() { return _devStart <= 4; }
+        },
+        {
+            timeline: [strategyTrial],
+            conditional_function: function() { return _devStart <= 5; }
+        },
+        {
+            timeline: [demographicsTrial],
+            conditional_function: function() { return _devStart <= 6; }
+        },
         saveData,
         completion
-    ]);
+    ];
 
     jsPsych.run(timeline);
 }
