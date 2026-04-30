@@ -461,7 +461,6 @@ function initStudy(graphData, condition) {
                     <li>Is each alien green or orange?</li>
                     <li>What does each alien eat?</li>
                 </ul>
-                <p>No feedback will be given. Just do your best.</p>
             </div>`],
         show_clickable_nav: true,
         allow_keys: false,
@@ -474,7 +473,7 @@ function initStudy(graphData, condition) {
         type: jsPsychHtmlButtonResponse,
         stimulus: `
             <div class='content-box' style='text-align:center;'>
-                <p style='font-size:17px; color:#555;'>Part 1 of 3: Were these two aliens friends?</p>
+                <p style='font-size:17px; color:#555;'>Were these two aliens friends with each other?</p>
             </div>`,
         choices: ['Start']
     };
@@ -487,7 +486,7 @@ function initStudy(graphData, condition) {
         type: jsPsychHtmlButtonResponse,
         stimulus: `
             <div class='content-box' style='text-align:center;'>
-                <p style='font-size:17px; color:#555;'>Part 2 of 3: Is each alien green or orange?</p>
+                <p style='font-size:17px; color:#555;'>Is each alien green or orange?</p>
             </div>`,
         choices: ['Start']
     };
@@ -500,7 +499,7 @@ function initStudy(graphData, condition) {
         type: jsPsychHtmlButtonResponse,
         stimulus: `
             <div class='content-box' style='text-align:center;'>
-                <p style='font-size:17px; color:#555;'>Part 3 of 3: What does each alien eat?</p>
+                <p style='font-size:17px; color:#555;'>What does each alien eat?</p>
             </div>`,
         choices: ['Start']
     };
@@ -509,28 +508,28 @@ function initStudy(graphData, condition) {
         behavior, nameMapping, behaviorLabels, species, jsPsych, sessionData
     );
 
-    // compute exclusion flags after phase 2
-    var phase2Done = {
-        type: jsPsychHtmlButtonResponse,
-        stimulus: `
-            <div class='content-box' style='text-align:center;'>
-                <p style='font-size:18px; color:#555;'>Memory check complete. Next up: 5 new aliens.</p>
-            </div>`,
-        choices: ['Continue'],
-        on_load: function() {
-            var val = sessionData.phase_2_validation;
+    // // compute exclusion flags after phase 2
+    // var phase2Done = {
+    //     type: jsPsychHtmlButtonResponse,
+    //     stimulus: `
+    //         <div class='content-box' style='text-align:center;'>
+    //             <p style='font-size:18px; color:#555;'>Memory check complete. Next up: 5 new aliens.</p>
+    //         </div>`,
+    //     choices: ['Continue'],
+    //     on_load: function() {
+    //         var val = sessionData.phase_2_validation;
 
-            var erCorrect = val.edge_recognition.filter(t => t.correct).length / val.edge_recognition.length;
-            var spCorrect = val.species_recall.filter(t => t.correct).length / val.species_recall.length;
-            var bhCorrect = val.behavior_recall.filter(t => t.correct).length / val.behavior_recall.length;
+    //         var erCorrect = val.edge_recognition.filter(t => t.correct).length / val.edge_recognition.length;
+    //         var spCorrect = val.species_recall.filter(t => t.correct).length / val.species_recall.length;
+    //         var bhCorrect = val.behavior_recall.filter(t => t.correct).length / val.behavior_recall.length;
 
-            sessionData.attention_flags.below_threshold_edge_recognition = erCorrect < THRESHOLD_EDGE_REC;
-            sessionData.attention_flags.below_threshold_species           = spCorrect < THRESHOLD_SPECIES;
-            sessionData.attention_flags.below_threshold_behavior          = bhCorrect < THRESHOLD_BEHAVIOR;
+    //         sessionData.attention_flags.below_threshold_edge_recognition = erCorrect < THRESHOLD_EDGE_REC;
+    //         sessionData.attention_flags.below_threshold_species           = spCorrect < THRESHOLD_SPECIES;
+    //         sessionData.attention_flags.below_threshold_behavior          = bhCorrect < THRESHOLD_BEHAVIOR;
 
-            logToBrowser('validation accuracy', { erCorrect, spCorrect, bhCorrect });
-        }
-    };
+    //         logToBrowser('validation accuracy', { erCorrect, spCorrect, bhCorrect });
+    //     }
+    // };
 
 
     // ══════════════════════════════════════════════════════════════
@@ -541,7 +540,8 @@ function initStudy(graphData, condition) {
         pages: [`
             <div class='content-box'>
                 <p>You'll now meet <b>2 new aliens</b> you haven't seen before.</p>
-                <p>For each one, choose <b>one thing</b> to reveal — their color, or who their friends are — then predict what they eat and rate your confidence.</p>
+                <p>Your job is to determine what they like to eat.</p>
+                <p>For each one, you can choose <b>one thing</b> to reveal about them (their color, or who their friends are), to help you decide.</p>
             </div>`],
         show_clickable_nav: true,
         allow_keys: false,
@@ -569,9 +569,8 @@ function initStudy(graphData, condition) {
                 <p style='font-size:18px;'>In your own words, how did you decide what each new alien eats?
                 What information did you find most useful?</p>
                 <p>
-                    <textarea name='strategy' rows='6' cols='70' minlength='30'
-                        placeholder='e.g. "I looked at whether the new alien seemed similar to..." (minimum 30 characters)'
-                        ${TESTING_MODE ? '' : 'required'}></textarea>
+                    <textarea name='strategy' rows='6' cols='70'
+                        placeholder='e.g. "I looked at whether the new alien seemed similar to..."'></textarea>
                 </p>
             </div>`,
         button_label: 'Continue',
@@ -697,13 +696,16 @@ function initStudy(graphData, condition) {
             conditional_function: function() { return _devStart <= 2; }
         },
         {
-            timeline: [phase2Instructions, edgeRecHeader]
-                .concat(edgeRecTrials)
-                .concat([speciesHeader])
-                .concat(speciesRecallTrials)
-                .concat([behaviorHeader])
-                .concat(behaviorRecallTrials)
-                .concat([phase2Done]),
+            timeline: (function() {
+                var blocks = jsPsych.randomization.shuffle([
+                    [edgeRecHeader].concat(edgeRecTrials),
+                    [speciesHeader].concat(speciesRecallTrials),
+                    [behaviorHeader].concat(behaviorRecallTrials)
+                ]);
+                return [phase2Instructions]
+                    .concat(blocks[0]).concat(blocks[1]).concat(blocks[2])
+                    // .concat([phase2Done]);
+            })(),
             conditional_function: function() { return _devStart <= 3; }
         },
         {

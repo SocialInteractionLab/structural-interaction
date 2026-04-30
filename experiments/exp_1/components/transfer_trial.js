@@ -53,8 +53,8 @@ function buildTransferTrials(opts, jsPsych) {
                     <!-- <div style='font-size:22px; font-weight:700; margin-top:8px;'>${novelName}</div> -->
                 </div>
                 <p class='transfer-prompt'>
-                    This new alien has <b>${TRANSFER_FRIENDS_REVEALED} friends</b> among the aliens you learned about.<br>
-                    To predict what it eats, you can learn <u>one thing</u>:
+                    This is a new alien you haven't seen before! Do you think it likes <b>${bLabels[0]}</b> or <b>${bLabels[1]}</b>?<br>
+                    To help determine what it likes to eat, you can learn one thing:
                 </p>
                 <div class='cue-choice-row' id='t-cue-choice'>
                     <button class='cue-btn' id='btn-species'>
@@ -92,9 +92,11 @@ function buildTransferTrials(opts, jsPsych) {
                         <p class='question-text'>How confident are you?</p>
                         <input type='range' class='trial-slider' id='conf-slider'
                             min='0' max='100' step='1' value='50'>
+                        <div style='text-align:center; margin:4px 0;'>
+                            <span class='slider-value-display' id='conf-val'>?</span>
+                        </div>
                         <div class='slider-footer'>
                             <span class='slider-label-min'>Not at all confident</span>
-                            <span class='slider-value-display' id='conf-val'>?</span>
                             <span class='slider-label-max'>Very confident</span>
                         </div>
                     </div>

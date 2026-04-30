@@ -27,13 +27,6 @@ function updateSliderGradient(slider, color) {
     var pct = ((slider.value - slider.min) / (slider.max - slider.min)) * 100;
     slider.style.background =
         `linear-gradient(to right, ${c} 0%, ${c} ${pct}%, #e0e0e0 ${pct}%, #e0e0e0 100%)`;
-    var valEl = slider.parentElement &&
-        slider.parentElement.querySelector('.slider-value-display');
-    if (valEl) {
-        var offset = 11 - (pct / 100) * 22;
-        // clamp so the label doesn't clip outside the track at either endpoint
-        valEl.style.left = `clamp(20px, calc(${pct}% + ${offset}px), calc(100% - 20px))`;
-    }
 }
 
 // prefix for datapipe filenames

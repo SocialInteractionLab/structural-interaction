@@ -147,7 +147,7 @@ def try_make_graph(seed):
 # ── image generation ──────────────────────────────────────────
 # color = group/species (matches actual gazorp colors)
 # shape = behavior: circle (0) vs square (1)
-GRP_COLORS = ['#2596be', '#f14d4d']   # group 0 = blue gazorp / group 1 = red gazorp
+GRP_COLORS = ['#1fb092', '#ee5e33']   # group 0 = green alien / group 1 = orange alien
 
 NOTATION_KEY = (
     "Notation\n"
@@ -155,8 +155,8 @@ NOTATION_KEY = (
     "  B  =  behavior (food pref)\n"
     "  C  =  category (group)\n\n"
     "  color  =  group (C)\n"
-    "    ■  group 0  (blue gazorp)\n"
-    "    ■  group 1  (red gazorp)\n"
+    "    ■  group 0  (green alien)\n"
+    "    ■  group 1  (orange alien)\n"
     "  shape  =  behavior (B)\n"
     "    ●  behavior 0\n"
     "    ■  behavior 1\n\n"

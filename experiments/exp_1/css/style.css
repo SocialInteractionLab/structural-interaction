@@ -124,7 +124,6 @@ input[type="range"].trial-slider::-moz-range-track {
 .slider-label-max { text-align: right; }
 .slider-value-display {
   font-size: 16px; font-weight: 700; color: #343633;
-  position: absolute; transform: translateX(-50%);
   white-space: nowrap; pointer-events: none;
 }
 
