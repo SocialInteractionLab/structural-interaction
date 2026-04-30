@@ -30,7 +30,7 @@ function buildTransferTrials(opts, jsPsych) {
         }
     }
 
-    var speciesAssignments = jsPsych.randomization.sampleWithoutReplacement([0,0,0,1,1], 5);
+    var speciesAssignments = jsPsych.randomization.shuffle([0, 1]);  // one green, one orange
     var shuffledTransferNames = jsPsych.randomization.shuffle([...TRANSFER_NAMES]);
 
     return shuffledTransferNames.map(function(novelName, trialIdx) {

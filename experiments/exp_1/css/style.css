@@ -132,14 +132,14 @@ input[type="range"].trial-slider::-moz-range-track {
 .learning-box {
   background: white; border: 1px solid #ddd;
   border-radius: 10px; box-shadow: 0 4px 16px rgba(0,0,0,0.08);
-  padding: 32px 48px 36px; margin: 20px auto;
-  box-sizing: border-box; width: 860px; max-width: 92vw;
+  padding: 20px 36px 24px; margin: 20px auto;
+  box-sizing: border-box; width: 700px; max-width: 92vw;
 }
 
 .alien-pair {
   display: flex; align-items: flex-start;
   justify-content: center;
-  margin: 16px 0;
+  margin: 12px 0;
 }
 
 .alien-card {
@@ -154,7 +154,7 @@ input[type="range"].trial-slider::-moz-range-track {
 .alien-img-wrap.upside-down { transform: rotate(180deg); }
 
 .alien-img {
-  width: 140px; height: 140px;
+  width: 160px; height: 160px;
   object-fit: contain; display: block;
 }
 
@@ -166,13 +166,13 @@ input[type="range"].trial-slider::-moz-range-track {
 
 .behavior-wrap {
   display: flex; flex-direction: column;
-  align-items: center; margin-top: 12px;
+  align-items: center; margin-top: 10px;
   visibility: hidden;
 }
 .behavior-wrap.revealed { visibility: visible; }
 
 .behavior-icon {
-  width: 52px; height: 52px; object-fit: contain;
+  width: 64px; height: 64px; object-fit: contain;
 }
 .behavior-label {
   font-size: 16px; font-weight: 600;
@@ -181,38 +181,39 @@ input[type="range"].trial-slider::-moz-range-track {
 }
 
 .pair-connector {
-  flex: 1;
+  width: 80px;
+  flex-shrink: 0;
   display: flex; align-items: center;
-  /* align w/ vertical center of alien img: name (~32px) + half img (70px) */
-  padding-top: 101px;
+  /* align w/ vertical center of alien img (no name): half of 160px img */
+  padding-top: 80px;
 }
 
 .pair-line {
   flex: 1;
-  height: 2px;
-  background: #ccc;
+  height: 4px;
+  background: #888;
   position: relative;
-  margin: 0 8px;  /* small gap so arrow tip doesn't overlap alien card edge */
+  margin: 0 6px;
 }
 
 /* left arrowhead */
 .pair-line::before {
   content: '';
   position: absolute;
-  left: -7px; top: 50%; transform: translateY(-50%);
-  border-top: 5px solid transparent;
-  border-bottom: 5px solid transparent;
-  border-right: 7px solid #ccc;
+  left: -9px; top: 50%; transform: translateY(-50%);
+  border-top: 7px solid transparent;
+  border-bottom: 7px solid transparent;
+  border-right: 9px solid #888;
 }
 
 /* right arrowhead */
 .pair-line::after {
   content: '';
   position: absolute;
-  right: -7px; top: 50%; transform: translateY(-50%);
-  border-top: 5px solid transparent;
-  border-bottom: 5px solid transparent;
-  border-left: 7px solid #ccc;
+  right: -9px; top: 50%; transform: translateY(-50%);
+  border-top: 7px solid transparent;
+  border-bottom: 7px solid transparent;
+  border-left: 9px solid #888;
 }
 
 .run-break-box {

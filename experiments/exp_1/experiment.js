@@ -237,9 +237,9 @@ function initStudy(graphData, condition) {
                 </div>
             </div>
         </div>`,
-        // page 3: example pair — friends, no food yet
+        // page 3: example pair with food revealed
         `<div class='content-box'>
-            <p>For each trial, you'll see a pair of aliens. Each pair you see together are friends. For example:</p>
+            <p>Each trial shows a pair of aliens who are friends. After a moment, you'll also see what each one eats:</p>
             <div class='learning-box' style='box-shadow:none; border:1px solid #e8e8e8;'>
                 <div class='alien-pair'>
                     <div class='alien-card'>
@@ -247,30 +247,7 @@ function initStudy(graphData, condition) {
                         <div class='alien-img-wrap'>
                             <img src='${exImgA}' class='alien-img'>
                         </div>
-                        <div class='behavior-wrap'></div>
-                    </div>
-                    <div class='pair-connector'><div class='pair-line'></div></div>
-                    <div class='alien-card'>
-                        <!-- <div class='alien-name'>${exNameB}</div> -->
-                        <div class='alien-img-wrap'>
-                            <img src='${exImgB}' class='alien-img'>
-                        </div>
-                        <div class='behavior-wrap'></div>
-                    </div>
-                </div>
-            </div>
-        </div>`,
-        // page 4: same pair with food revealed
-        `<div class='content-box'>
-            <p>Underneath each alien, you'll also see what it eats. For example:</p>
-            <div class='learning-box' style='box-shadow:none; border:1px solid #e8e8e8;'>
-                <div class='alien-pair'>
-                    <div class='alien-card'>
-                        <!-- <div class='alien-name'>${exNameA}</div> -->
-                        <div class='alien-img-wrap'>
-                            <img src='${exImgA}' class='alien-img'>
-                        </div>
-                        <div class='behavior-wrap revealed'>
+                        <div class='behavior-wrap'>
                             <img src='${exIconA}' class='behavior-icon' alt='${exLabelA}'>
                             <span class='behavior-label'>${exLabelA}</span>
                         </div>
@@ -281,7 +258,7 @@ function initStudy(graphData, condition) {
                         <div class='alien-img-wrap'>
                             <img src='${exImgB}' class='alien-img'>
                         </div>
-                        <div class='behavior-wrap revealed'>
+                        <div class='behavior-wrap'>
                             <img src='${exIconB}' class='behavior-icon' alt='${exLabelB}'>
                             <span class='behavior-label'>${exLabelB}</span>
                         </div>
@@ -302,7 +279,16 @@ function initStudy(graphData, condition) {
         allow_keys: false,
         allow_backward: true,
         on_load: function() { lockInstructionsNext(5); },
-        on_page_change: function() { lockInstructionsNext(5); }
+        on_page_change: function() {
+            lockInstructionsNext(5);
+            // example pair page has .behavior-wrap elements — reveal food after a delay
+            var wraps = document.querySelectorAll('.behavior-wrap');
+            if (wraps.length > 0) {
+                setTimeout(function() {
+                    wraps.forEach(function(el) { el.classList.add('revealed'); });
+                }, 1500);
+            }
+        }
     };
 
     var comprehensionCheck = {
@@ -554,14 +540,8 @@ function initStudy(graphData, condition) {
         type: jsPsychInstructions,
         pages: [`
             <div class='content-box'>
-                <p>You'll now meet <b>5 new aliens</b> you haven't seen before.</p>
-                <p>For each one, you can reveal <b>one thing</b> to help you determine what they like to eat:</p>
-                <ul>
-                    <li>Whether they're green or orange, <b>or</b></li>
-                    <li>Who their friends are</li>
-                </ul>
-                <p>Then you'll make a prediction and rate how confident you are.</p>
-                <p>There's no right or wrong choice --  we're just interested in what you think!</p>
+                <p>You'll now meet <b>2 new aliens</b> you haven't seen before.</p>
+                <p>For each one, choose <b>one thing</b> to reveal — their color, or who their friends are — then predict what they eat and rate your confidence.</p>
             </div>`],
         show_clickable_nav: true,
         allow_keys: false,
@@ -570,7 +550,7 @@ function initStudy(graphData, condition) {
     };
 
     // random alien designs for the 5 transfer aliens (greyed out)
-    var transferAlienIndices = jsPsych.randomization.sampleWithoutReplacement([0,1,2,3,4,5,6,7], 5);
+    var transferAlienIndices = jsPsych.randomization.sampleWithoutReplacement([0,1,2,3,4,5,6,7], 2);
 
     var transferTrials = buildTransferTrials({
         condition, species, behavior, nameMapping, behaviorLabels,

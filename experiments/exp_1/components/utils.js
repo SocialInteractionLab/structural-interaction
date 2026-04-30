@@ -31,7 +31,8 @@ function updateSliderGradient(slider, color) {
         slider.parentElement.querySelector('.slider-value-display');
     if (valEl) {
         var offset = 11 - (pct / 100) * 22;
-        valEl.style.left = `calc(${pct}% + ${offset}px)`;
+        // clamp so the label doesn't clip outside the track at either endpoint
+        valEl.style.left = `clamp(20px, calc(${pct}% + ${offset}px), calc(100% - 20px))`;
     }
 }
 

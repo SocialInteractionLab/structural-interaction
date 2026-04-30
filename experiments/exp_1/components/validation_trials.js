@@ -3,7 +3,7 @@
 // 2a — edge recognition
 // trials: array of {pair, true_edge} from graph JSON
 function buildEdgeRecTrials(trials, nameMapping, species, jsPsych, sessionData) {
-    var shuffled = jsPsych.randomization.shuffle([...trials]);
+    var shuffled = jsPsych.randomization.shuffle([...trials]).slice(0, 5);
     return shuffled.map(function(t, i) {
         var nameA = nameMapping[t.pair[0]], nameB = nameMapping[t.pair[1]];
         var html = `
@@ -12,11 +12,11 @@ function buildEdgeRecTrials(trials, nameMapping, species, jsPsych, sessionData) 
                 <p class='prompt'>Were these two aliens friends with each other?</p>
                 <div class='validation-pair'>
                     <div class='validation-alien'>
-                        <img src='${speciesImg(t.pair[0], species[t.pair[0]])}' class='neutral-img' style='filter:grayscale(100%);' alt=''>
+                        <img src='${speciesImg(t.pair[0], species[t.pair[0]])}' class='neutral-img' alt=''>
                         <!-- <div class='validation-name'>${nameA}</div> -->
                     </div>
                     <div class='validation-alien'>
-                        <img src='${speciesImg(t.pair[1], species[t.pair[1]])}' class='neutral-img' style='filter:grayscale(100%);' alt=''>
+                        <img src='${speciesImg(t.pair[1], species[t.pair[1]])}' class='neutral-img' alt=''>
                         <!-- <div class='validation-name'>${nameB}</div> -->
                     </div>
                 </div>

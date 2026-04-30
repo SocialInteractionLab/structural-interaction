@@ -12,7 +12,7 @@ const PROLIFIC_COMPLETION_URL = 'https://app.prolific.com/submissions/complete?c
 const NUM_GRAPHS = 5;
 
 // timing (ms)
-const LEARNING_ONSET_MS  = 2500;  // pair+species visible before behavior reveal
+const LEARNING_ONSET_MS  = 3000;  // pair+species visible before behavior reveal
 const LEARNING_REVEAL_MS = 1500;  // behavior visible duration
 const LEARNING_ITI_MS    = 500;
 
@@ -29,8 +29,8 @@ const USE_PER_INDIVIDUAL_MARKER = false;
 // 12 learning alien names (distinct, phonetically separated)
 const LEARNING_NAMES = ['Nep', 'Vor', 'Kil', 'Zan', 'Plu', 'Mox', 'Tib', 'Rek', 'Gav', 'Sol', 'Qip', 'Wel'];
 
-// 5 transfer alien names (separate pool)
-const TRANSFER_NAMES = ['Vex', 'Jop', 'Har', 'Bim', 'Dox'];
+// 2 transfer alien names (one per species)
+const TRANSFER_NAMES = ['Vex', 'Jop'];
 
 // exclusion thresholds (proportion correct)
 const THRESHOLD_EDGE_REC = 0.65;
