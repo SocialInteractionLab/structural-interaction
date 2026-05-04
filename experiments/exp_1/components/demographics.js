@@ -1,21 +1,7 @@
-// demographics + strategy — adapted from norming_study
+// demographics — redesigned w/ demo-grid layout
 
 function getDemographicsHTML() {
-    var html = "<div class='prevent-select content-box' style='text-align:left;'>";
-    html += "<p><b>A few quick questions about yourself:</b></p>";
-
-    html += "<p>Age: &emsp;<input name='age' type='number' min='18' max='100' /></p>";
-
-    html += "<p><label for='gender'>Gender: &emsp;</label><select id='gender' name='gender'>";
-    html += "<option disabled selected></option>";
-    html += "<option value='Male'>Male</option>";
-    html += "<option value='Female'>Female</option>";
-    html += "<option value='Non-binary'>Non-binary</option>";
-    html += "<option value='Prefer Not to Say'>Prefer Not to Say</option>";
-    html += "</select></p>";
-
-    html += "<p><b>Race/Ethnicity</b> (select all that apply):</p><div style='margin-left:20px;'>";
-    [
+    var raceOptions = [
         ['race_white',       'White'],
         ['race_black',       'Black or African American'],
         ['race_hispanic',    'Hispanic or Latino'],
@@ -23,26 +9,60 @@ function getDemographicsHTML() {
         ['race_aian',        'American Indian or Alaska Native'],
         ['race_nhpi',        'Native Hawaiian or Pacific Islander'],
         ['race_multiracial', 'Multiracial'],
-        ['race_pnts',        'Prefer Not to Say'],
+        ['race_pnts',        'Prefer not to say'],
         ['race_other',       'Other']
-    ].forEach(function(pair) {
-        html += `<label><input type='checkbox' name='${pair[0]}' value='${pair[1]}' /> ${pair[1]}</label><br>`;
-    });
-    html += "</div>";
+    ];
 
-    html += "<p><label for='education'>Education: &emsp;</label><select id='education' name='education'>";
-    html += "<option disabled selected></option>";
-    html += "<option value='less_than_hs'>Less than high school</option>";
-    html += "<option value='high_school'>High school / GED</option>";
-    html += "<option value='some_college'>Some college</option>";
-    html += "<option value='bachelors'>Bachelor's degree</option>";
-    html += "<option value='masters'>Master's degree</option>";
-    html += "<option value='doctorate'>Doctorate (PhD, MD, JD, etc.)</option>";
-    html += "<option value='other'>Other</option>";
-    html += "</select></p>";
+    var raceCheckboxes = raceOptions.map(function(pair) {
+        return `<label class='checkbox-row'>
+            <input type='checkbox' name='${pair[0]}' value='${pair[1]}'>
+            <span>${pair[1]}</span>
+        </label>`;
+    }).join('');
 
-    html += "</div>";
-    return html;
+    return `
+        <div class='page-inner prevent-select'>
+            <div class='card card-narrow'>
+                <div class='eyebrow swing-in d-1'>Almost done</div>
+                <h1 class='swing-in d-2' style='font-size:28px;'>A few quick questions about you.</h1>
+                <p class='muted swing-in d-3' style='margin-bottom:24px;'>
+                    We use this only to describe our sample in aggregate. None of your responses are tied to your name.
+                </p>
+                <div class='demo-grid'>
+                    <div class='demo-field'>
+                        <label for='age'>Age</label>
+                        <input type='number' id='age' name='age' min='18' max='100' placeholder='e.g. 27'>
+                    </div>
+                    <div class='demo-field'>
+                        <label for='gender'>Gender</label>
+                        <select id='gender' name='gender'>
+                            <option value='' disabled selected>Select…</option>
+                            <option value='Male'>Male</option>
+                            <option value='Female'>Female</option>
+                            <option value='Non-binary'>Non-binary</option>
+                            <option value='Prefer not to say'>Prefer not to say</option>
+                        </select>
+                    </div>
+                    <div class='demo-field full'>
+                        <label>Race / Ethnicity <span style='color:var(--ink-3); font-weight:400;'>(select all that apply)</span></label>
+                        <div class='checkbox-grid'>${raceCheckboxes}</div>
+                    </div>
+                    <div class='demo-field full'>
+                        <label for='education'>Education</label>
+                        <select id='education' name='education'>
+                            <option value='' disabled selected>Select…</option>
+                            <option value='less_than_hs'>Less than high school</option>
+                            <option value='high_school'>High school / GED</option>
+                            <option value='some_college'>Some college</option>
+                            <option value='bachelors'>Bachelor's degree</option>
+                            <option value='masters'>Master's degree</option>
+                            <option value='doctorate'>Doctorate (PhD, MD, JD, etc.)</option>
+                            <option value='other'>Other</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>`;
 }
 
 function processDemographics(data, jsPsych) {
@@ -51,7 +71,7 @@ function processDemographics(data, jsPsych) {
     jsPsych.data.dataProperties.sessionData.phase_5_demographics = {
         age:       r.age ? parseInt(r.age) : null,
         gender:    r.gender || null,
-        race:      raceKeys.filter(k => r[k]).map(k => r[k]),
+        race:      raceKeys.filter(function(k) { return r[k]; }).map(function(k) { return r[k]; }),
         education: r.education || null
     };
 }

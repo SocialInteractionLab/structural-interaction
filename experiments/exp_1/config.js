@@ -2,6 +2,9 @@
 
 const TESTING_MODE = true;
 
+// theme: 'playful' | 'botanical' | 'bauhaus'
+window.EXPERIMENT_THEME = 'playful';
+
 // datapipe / osf IDs
 const DATAPIPE_EXPERIMENT_ID = 'JYEBdZJ7ca6L';
 const OSF_PROJECT_ID         = '965at';
@@ -12,8 +15,8 @@ const PROLIFIC_COMPLETION_URL = 'https://app.prolific.com/submissions/complete?c
 const NUM_GRAPHS = 5;
 
 // timing (ms)
-const LEARNING_ONSET_MS  = 3000;  // pair+species visible before behavior reveal
-const LEARNING_REVEAL_MS = 1500;  // behavior visible duration
+const LEARNING_ONSET_MS  = 2400;  // pair visible before behavior reveal
+const LEARNING_REVEAL_MS = 3100;  // behavior visible before next trial (total 5500ms)
 const LEARNING_ITI_MS    = 500;
 
 // learning phase

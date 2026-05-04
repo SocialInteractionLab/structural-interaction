@@ -21,12 +21,12 @@ function logToBrowser(ctx, val) {
     if (VERBOSE) console.log('\t', ctx, ':', val);
 }
 
-// fills slider track up to current value; color defaults to teal
+// fills slider track up to current value
 function updateSliderGradient(slider, color) {
-    var c = color || '#343633';
+    var c = color || 'var(--accent)';
     var pct = ((slider.value - slider.min) / (slider.max - slider.min)) * 100;
     slider.style.background =
-        `linear-gradient(to right, ${c} 0%, ${c} ${pct}%, #e0e0e0 ${pct}%, #e0e0e0 100%)`;
+        `linear-gradient(to right, ${c} 0%, ${c} ${pct}%, var(--line) ${pct}%, var(--line) 100%)`;
 }
 
 // prefix for datapipe filenames
@@ -62,8 +62,8 @@ function applyFullscreenOverlay() {
     overlay.style.display = 'none';
     overlay.innerHTML = `
         <div class='fullscreen-overlay-box'>
-            <p style='font-size:18px; margin-bottom:20px;'>Please return to fullscreen to continue.</p>
-            <button class='jspsych-btn' onclick="document.documentElement.requestFullscreen()">Return to Fullscreen</button>
+            <p>Please return to fullscreen to continue.</p>
+            <button class='btn' onclick="document.documentElement.requestFullscreen()">Return to fullscreen</button>
         </div>`;
     document.body.appendChild(overlay);
     document.addEventListener('fullscreenchange', function() {

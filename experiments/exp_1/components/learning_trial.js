@@ -3,7 +3,6 @@
 //        species, behavior, nameMapping, behaviorLabels, sessionData}
 function buildLearningTrial(opts, jsPsych) {
     var nodeA = opts.edge[0], nodeB = opts.edge[1];
-    var nameA = opts.nameMapping[nodeA], nameB = opts.nameMapping[nodeB];
     var speciesA = opts.species[nodeA], speciesB = opts.species[nodeB];
     var behA    = opts.behavior[nodeA], behB    = opts.behavior[nodeB];
     var imgA    = speciesImg(nodeA, speciesA), imgB    = speciesImg(nodeB, speciesB);
@@ -14,27 +13,31 @@ function buildLearningTrial(opts, jsPsych) {
     var rotB    = opts.isUpsideDown && opts.upsideDownNode === nodeB;
 
     var html = `
-        <div class='learning-box'>
-            <div class='alien-pair'>
-                <div class='alien-card'>
-                    <!-- <div class='alien-name'>${nameA}</div> -->
-                    <div class='alien-img-wrap ${rotA ? 'upside-down' : ''}'>
-                        <img src='${imgA}' class='alien-img' alt=''>
+        <div class='learn-stage prevent-select'>
+            <div class='learn-frame'>
+                <div class='pair'>
+                    <div class='alien-slot'>
+                        <div class='alien-img-wrap ${rotA ? 'upside-down' : ''}'>
+                            <img src='${imgA}' class='alien-img' alt=''>
+                        </div>
+                        <div class='behavior' id='bwrap-a'>
+                            <div class='behavior-plate'>
+                                <img src='${iconA}' class='behavior-icon' alt='${labelA}'>
+                                <span class='behavior-name'>${labelA}</span>
+                            </div>
+                        </div>
                     </div>
-                    <div class='behavior-wrap' id='bwrap-a'>
-                        <img src='${iconA}' class='behavior-icon' alt='${labelA}'>
-                        <span class='behavior-label'>${labelA}</span>
-                    </div>
-                </div>
-                <div class='pair-connector'><div class='pair-line'></div></div>
-                <div class='alien-card'>
-                    <!-- <div class='alien-name'>${nameB}</div> -->
-                    <div class='alien-img-wrap ${rotB ? 'upside-down' : ''}'>
-                        <img src='${imgB}' class='alien-img' alt=''>
-                    </div>
-                    <div class='behavior-wrap' id='bwrap-b'>
-                        <img src='${iconB}' class='behavior-icon' alt='${labelB}'>
-                        <span class='behavior-label'>${labelB}</span>
+                    <div class='bond'><div class='bond-line'></div></div>
+                    <div class='alien-slot'>
+                        <div class='alien-img-wrap ${rotB ? 'upside-down' : ''}'>
+                            <img src='${imgB}' class='alien-img' alt=''>
+                        </div>
+                        <div class='behavior' id='bwrap-b'>
+                            <div class='behavior-plate'>
+                                <img src='${iconB}' class='behavior-icon' alt='${labelB}'>
+                                <span class='behavior-name'>${labelB}</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -92,19 +95,35 @@ function buildLearningTrial(opts, jsPsych) {
 }
 
 // short break between runs
-function buildRunBreak(runNum, totalRuns, jsPsych) {
+function buildRunBreak(runNum, totalRuns, jsPsych, onLoadCallback) {
+    var pct = Math.round((runNum / totalRuns) * 100);
+    var pips = Array.from({ length: totalRuns }, function(_, i) {
+        var cls = i < runNum ? 'done' : i === runNum ? 'now' : '';
+        return `<div class='run-pip ${cls}'></div>`;
+    }).join('');
+
     return {
         type: jsPsychHtmlButtonResponse,
         stimulus: `
-            <div class='run-break-box'>
-                <p style='font-size:17px; color:#888; margin-bottom:6px;'>
-                    Run ${runNum} of ${totalRuns} complete
-                </p>
-                <p style='font-size:22px; font-weight:600; color:#333;'>Take a breath.</p>
-                <p style='font-size:17px; color:#555;'>
-                    Press <b>Continue</b> when you're ready for the next round.
-                </p>
+            <div class='page-inner'>
+                <div class='card card-narrow run-break'>
+                    <div class='meta swing-in d-1'>${runNum} of ${totalRuns} runs complete</div>
+                    <p class='muted swing-in d-3' style='text-align:center; max-width:480px; margin:0 auto;'>
+                        You're ${pct}% of the way through this part
+                    </p>
+                    <div class='run-progress'>${pips}</div>
+                    <div class='btn-row'>
+                        <button class='btn btn-lg' id='rb-continue'>Continue</button>
+                    </div>
+                </div>
             </div>`,
-        choices: ['Continue']
+        choices: [],
+        response_ends_trial: false,
+        on_load: function() {
+            if (onLoadCallback) onLoadCallback();
+            document.getElementById('rb-continue').addEventListener('click', function() {
+                jsPsych.finishTrial();
+            });
+        }
     };
 }

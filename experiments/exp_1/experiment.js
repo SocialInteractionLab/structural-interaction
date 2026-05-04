@@ -10,6 +10,7 @@ function initStudy(graphData, condition) {
     var _devStart = (TESTING_MODE && window._devStartPhase != null) ? window._devStartPhase : 0;
 
     if (TESTING_MODE) {
+        document.body.classList.add('dev-mode');
         var _toolbar = document.getElementById('dev-toolbar');
         if (!_toolbar) {
             _toolbar = document.createElement('div');
@@ -45,23 +46,77 @@ function initStudy(graphData, condition) {
         document.getElementById('dev-jump-btn').addEventListener('click', function() {
             var target = parseInt(document.getElementById('dev-phase-select').value);
             window._devStartPhase = target;
-            // clear everything except the toolbar, then reinit
             Array.from(document.body.children).forEach(function(c) {
                 if (c.id !== 'dev-toolbar') c.remove();
             });
+            document.body.classList.remove('dev-mode');
             initStudy(window._devGraphData, window._devCondition);
         });
-        // push body content below toolbar so nothing is hidden behind it
         document.body.style.paddingTop = '32px';
     }
 
+    // ── phase stepper (persistent fixed header) ───────────────────
+    var PHASES = [
+        { key: 'intro',    label: 'Intro' },
+        { key: 'learning', label: 'Learning' },
+        { key: 'memory',   label: 'Memory' },
+        { key: 'transfer', label: 'New aliens' },
+    ];
+
+    var _frameTop = document.getElementById('frame-top');
+    if (!_frameTop) {
+        _frameTop = document.createElement('div');
+        _frameTop.id = 'frame-top';
+        _frameTop.className = 'frame-top';
+        document.body.appendChild(_frameTop);
+    }
+
+    function renderStepper(activeKey, subInfo) {
+        var existingFill = document.getElementById('progress-fill');
+        var pct = existingFill ? parseFloat(existingFill.style.width) / 100 : 0;
+
+        var stepsHtml = PHASES.map(function(p, i) {
+            var activeIdx = PHASES.findIndex(function(x) { return x.key === activeKey; });
+            var isActive  = i === activeIdx;
+            var isDone    = i < activeIdx;
+            var cls = (isActive ? ' active' : '') + (isDone ? ' done' : '');
+
+            var subHtml = '';
+            if (isActive && subInfo) {
+                var pips = Array.from({ length: subInfo.total }, function(_, si) {
+                    var pc = si < subInfo.activeIdx ? ' done' : si === subInfo.activeIdx ? ' now' : '';
+                    return `<div class='sub-pip${pc}'></div>`;
+                }).join('');
+                subHtml = `<div class='sub-steps'>${pips}</div><span class='sub-label'>${subInfo.label}</span>`;
+            }
+
+            return (i > 0 ? "<div class='step-sep'></div>" : '') +
+                `<div class='step${cls}'><span class='step-dot'></span><span>${p.label}</span>${subHtml}</div>`;
+        }).join('');
+
+        _frameTop.innerHTML = `
+            <div class='stepper'>
+                <div class='steps'>${stepsHtml}</div>
+            </div>
+            <div class='progress-track'>
+                <div class='progress-fill' id='progress-fill' style='width:${pct * 100}%'></div>
+            </div>`;
+    }
+
+    renderStepper('intro');
+
+    function setPhase(key, subInfo) {
+        renderStepper(key, subInfo || null);
+    }
+
+    // ── jsPsych init ──────────────────────────────────────────────
     var urlParams  = new URLSearchParams(window.location.search);
     var prolificID = urlParams.get('PROLIFIC_PID') || '';
     var studyID    = urlParams.get('STUDY_ID')     || '';
     var sessionID  = urlParams.get('SESSION_ID')   || '';
 
     var jsPsych = initJsPsych({
-        show_progress_bar: true,
+        show_progress_bar: false,
         auto_update_progress_bar: false
     });
 
@@ -89,22 +144,19 @@ function initStudy(graphData, condition) {
     var condData = condition === 'homophily'
         ? graphData.homophily_condition
         : graphData.category_condition;
-    var species  = condData.group;     // array[8] of 0/1
-    var behavior = condData.behavior;  // array[8] of 0/1
-    var edges    = graphData.edges;    // array of [i,j]
+    var species  = condData.group;
+    var behavior = condData.behavior;
+    var edges    = graphData.edges;
 
-    // random name assignment: shuffle learning names, assign to nodes 0-11
     var shuffledNames = jsPsych.randomization.shuffle([...LEARNING_NAMES]);
     var nameMapping   = {};
-    shuffledNames.forEach((name, i) => { nameMapping[i] = name; });
+    shuffledNames.forEach(function(name, i) { nameMapping[i] = name; });
 
-    // random behavior label swap: which int maps to 'glorp' vs 'flim'
     var behaviorSwap   = jsPsych.randomization.sampleWithoutReplacement([0, 1], 1)[0];
     var behaviorLabels = behaviorSwap === 0
         ? { 0: 'glorp', 1: 'flim' }
         : { 0: 'flim',  1: 'glorp' };
 
-    // ── session data object (matches spec §7) ─────────────────────
     var sessionData = {
         participant_id: prolificID || subjectID,
         session_id:     subjectID,
@@ -125,10 +177,10 @@ function initStudy(graphData, condition) {
             graph_id:               graphData.graph_id,
             graph_seed:             graphData.seed,
             alien_image_mapping:    Object.fromEntries(Object.entries(nameMapping).map(
-                ([node, name]) => [name, speciesImg(parseInt(node), species[node])]
+                function(_ref) { var node = _ref[0], name = _ref[1]; return [name, speciesImg(parseInt(node), species[node])]; }
             )),
             name_mapping:           Object.fromEntries(Object.entries(nameMapping).map(
-                ([node, name]) => [`node_${node}`, name]
+                function(_ref) { var node = _ref[0], name = _ref[1]; return ['node_' + node, name]; }
             )),
             species_label_mapping:  { 0: 'green alien', 1: 'orange alien' },
             behavior_label_mapping: behaviorLabels
@@ -150,13 +202,12 @@ function initStudy(graphData, condition) {
     logToBrowser('session init', { condition, graphId: graphData.graph_id, nameMapping, behaviorLabels });
 
     console.log(
-        `%c[structural-interaction]`,
-        'font-weight:bold; color:#353633;',
-        `\ncondition : ${condition}`,
-        `\ngraph     : ${graphData.graph_id} (seed ${graphData.seed})`,
-        `\nρ(E→B)    : ${condData.rho_EB}`,
-        `\nρ(C→B)    : ${condData.rho_CB}`,
-        `\nbehavior labels: 0=${behaviorLabels[0]}, 1=${behaviorLabels[1]}`
+        '%c[structural-interaction]', 'font-weight:bold; color:#353633;',
+        '\ncondition :', condition,
+        '\ngraph     :', graphData.graph_id, '(seed', graphData.seed + ')',
+        '\nρ(E→B)    :', condData.rho_EB,
+        '\nρ(C→B)    :', condData.rho_CB,
+        '\nbehavior labels: 0=' + behaviorLabels[0] + ', 1=' + behaviorLabels[1]
     );
 
 
@@ -166,30 +217,40 @@ function initStudy(graphData, condition) {
     var consent = {
         type: jsPsychHtmlButtonResponse,
         stimulus: `
-            <div class='content-box' style='position:relative;'>
-                <div class='lab-logo'>${LAB_LOGO}</div>
-                <p style='text-align:center; font-size:22px; font-weight:bold; margin-bottom:4px;'>Welcome!</p>
-                <p style='text-align:center; color:#777; font-size:15px; margin:0 0 24px;'>${LAB_NAME} &nbsp;·&nbsp; ${INSTITUTION}</p>
-                <hr class='consent-hr'>
-                <p>Thank you for your interest in our study! You are being invited to participate in research conducted by researchers at the ${LAB_NAME} at ${INSTITUTION}. The purpose of this study is to understand how people learn about new social environments.</p>
-                <p>You will meet a group of aliens and learn about their friendships, species, and eating habits. This study takes approximately <strong>${ESTIMATED_DURATION_MIN} minutes</strong>, and you will receive <strong>$${PAYMENT.toFixed(2)}</strong> for your participation.</p>
-                <p>Your participation is completely voluntary and you may withdraw at any time without penalty. You must be at least 18 years old. There are no known risks. Your responses will be kept anonymous.</p>
-                <p>If you have questions, contact us at <a href='mailto:${CONTACT_EMAIL}'>${CONTACT_EMAIL}</a>. For questions about your rights as a participant, contact the Stanford University IRB.</p>
-                <hr class='consent-hr'>
-                <p style='font-size:15px; color:#555;'>By clicking below, I confirm I am 18+, have read the information above, and agree to participate.</p>
-                <div style='text-align:center; margin-top:8px;'>
-                    <button id='consent-btn' class='jspsych-btn'>I Agree, Begin Study</button>
+            <div class='page-inner'>
+                <div class='card card-narrow' style='position:relative;'>
+                    <div class='eyebrow'>Welcome!</div>
+                    <p class='lead' style='color:var(--ink-2); margin-top:14px;'>
+                        In today's study, you'll meet a small group of aliens and learn about their friendships,
+                        species, and eating habits. The whole study takes about <strong>10 minutes</strong>.
+                    </p>
+                    <hr>
+                    <p class='muted'>
+                        Your participation is completely voluntary, and you may withdraw at any time without penalty.
+                        You must be at least 18 years old to participate. There are no known risks associated with this research.
+                        Your responses will be kept anonymous — no personally identifying information will be collected or associated with your data.
+                    </p>
+                    <p class='muted'>
+                        If you have questions about this study, please contact us at
+                        <a href='mailto:${CONTACT_EMAIL}' style='color:var(--ink);'>${CONTACT_EMAIL}</a>.
+                        For questions about your rights as a research participant, please contact the Stanford University Institutional Review Board.
+                    </p>
+                    <hr>
+                    <p class='muted' style='margin-top:4px;'>
+                        By clicking below, I confirm that I am 18 or older, have read and understood the information above, and agree to participate.
+                    </p>
+                    <div style='margin-top:16px;'>
+                        <button class='btn btn-lg' id='consent-btn'>I agree — start the study</button>
+                    </div>
                 </div>
             </div>`,
         choices: [],
         response_ends_trial: false,
         on_load: function() {
-            document.querySelector('#jspsych-progressbar-container').style.display = 'none';
             document.getElementById('consent-btn').addEventListener('click', function() {
-                document.documentElement.requestFullscreen().catch(err => {
-                    console.error(`fullscreen error: ${err.message}`);
+                document.documentElement.requestFullscreen().catch(function(err) {
+                    console.error('fullscreen error:', err.message);
                 });
-                document.querySelector('#jspsych-progressbar-container').style.display = '';
                 jsPsych.finishTrial();
             });
         }
@@ -197,167 +258,266 @@ function initStudy(graphData, condition) {
 
 
     // ══════════════════════════════════════════════════════════════
-    // OVERVIEW INSTRUCTIONS + COMPREHENSION CHECK (with retry loop)
+    // COMPREHENSION CHECK (with retry loop)
     // ══════════════════════════════════════════════════════════════
-    // example pair for instruction pages 3 & 4
     var exA = edges[0][0], exB = edges[0][1];
-    var exNameA  = nameMapping[exA],  exNameB  = nameMapping[exB];
-    var exImgA   = speciesImg(exA, species[exA]),   exImgB   = speciesImg(exB, species[exB]);
-    var exIconA  = behaviorIcon(behavior[exA], behaviorLabels);
-    var exIconB  = behaviorIcon(behavior[exB], behaviorLabels);
+    var exImgA  = speciesImg(exA, species[exA]),   exImgB   = speciesImg(exB, species[exB]);
+    var exIconA = behaviorIcon(behavior[exA], behaviorLabels);
+    var exIconB = behaviorIcon(behavior[exB], behaviorLabels);
     var exLabelA = behaviorLabels[behavior[exA]], exLabelB = behaviorLabels[behavior[exB]];
 
-    var overviewPages = [
-        // page 1: introduce alien species w/ images
-        `<div class='content-box'>
-            <p>On an island called <b>dude</b>, there are 8 aliens.</p>
-            <p>Each alien is either <span style='color:#1fb092; font-weight:600;'>green</span> or <span style='color:#ee5e33; font-weight:600;'>orange</span>:</p>
-            <div style='display:flex; justify-content:center; align-items:center; gap:32px; margin:24px 0;'>
-                <div style='text-align:center;'>
-                    <img src='stimuli/aliens/alien_1_green.png' style='width:120px; height:120px; object-fit:contain;'>
-                </div>
-                <div style='color:#555; font-size:18px; font-weight:600;'>or</div>
-                <div style='text-align:center;'>
-                    <img src='stimuli/aliens/alien_1_orange.png' style='width:120px; height:120px; object-fit:contain;'>
-                </div>
-            </div>
-        </div>`,
-        // page 2: introduce the two foods w/ icons
-        `<div class='content-box'>
-            <p>Each alien eats one of two foods:</p>
-            <div style='display:flex; justify-content:center; align-items:center; gap:32px; margin:24px 0;'>
-                <div style='text-align:center;'>
-                    <img src='stimuli/food/glorp.svg' style='width:80px; height:80px; object-fit:contain;'>
-                    <div style='margin-top:8px; font-weight:600; font-size:18px;'>glorp</div>
-                </div>
-                <div style='color:#555; font-size:18px; font-weight:600;'>or</div>
-                <div style='text-align:center;'>
-                    <img src='stimuli/food/flim.svg' style='width:80px; height:80px; object-fit:contain;'>
-                    <div style='margin-top:8px; font-weight:600; font-size:18px;'>flim</div>
-                </div>
-            </div>
-        </div>`,
-        // page 3: example pair with food revealed
-        `<div class='content-box'>
-            <p>Each trial shows a pair of aliens who are friends. After a moment, you'll also see what each one eats:</p>
-            <div class='learning-box' style='box-shadow:none; border:1px solid #e8e8e8;'>
-                <div class='alien-pair'>
-                    <div class='alien-card'>
-                        <!-- <div class='alien-name'>${exNameA}</div> -->
-                        <div class='alien-img-wrap'>
-                            <img src='${exImgA}' class='alien-img'>
+    // intro pages (3 pages, paginated w/ 5s read-lock)
+    var _introPage = 0;
+    var _introSecs = 5;
+    var _introReveal = false;
+    var _introTimer = null;
+    var _introRevealTimer = null;
+
+    function buildIntroHTML(page, secs, revealed) {
+        var pages = [
+            {
+                eyebrow: '01',
+                title:   'On an island called Dude, there are 8 aliens',
+                body:    'Each alien is either <span style="color:var(--species-green); font-weight:600;">green</span> or <span style="color:var(--species-orange); font-weight:600;">orange</span>',
+                figure:  `
+                    <div class='intro-figure'>
+                        <div class='intro-fig-item'>
+                            <div class='alien-img-wrap' style='width:160px; height:160px;'>
+                                <img src='stimuli/aliens/alien_1_green.png' class='alien-img' alt=''>
+                            </div>
+                            <div class='fig-label' style='color:var(--species-green);'>green</div>
                         </div>
-                        <div class='behavior-wrap'>
-                            <img src='${exIconA}' class='behavior-icon' alt='${exLabelA}'>
-                            <span class='behavior-label'>${exLabelA}</span>
+                        <div class='intro-or'>or</div>
+                        <div class='intro-fig-item'>
+                            <div class='alien-img-wrap' style='width:160px; height:160px;'>
+                                <img src='stimuli/aliens/alien_1_orange.png' class='alien-img' alt=''>
+                            </div>
+                            <div class='fig-label' style='color:var(--species-orange);'>orange</div>
                         </div>
+                    </div>`
+            },
+            {
+                eyebrow: '02',
+                title:   'Each alien eats one of two foods',
+                body:    "",
+                figure:  `
+                    <div class='intro-figure'>
+                        <div class='intro-fig-item'>
+                            <div style='width:130px; height:130px; display:flex; align-items:center; justify-content:center;'>
+                                <img src='stimuli/food/glorp.svg' style='width:96px; height:96px; object-fit:contain;' alt=''>
+                            </div>
+                            <div class='fig-label'>glorp</div>
+                        </div>
+                        <div class='intro-or'>or</div>
+                        <div class='intro-fig-item'>
+                            <div style='width:130px; height:130px; display:flex; align-items:center; justify-content:center;'>
+                                <img src='stimuli/food/flim.svg' style='width:96px; height:96px; object-fit:contain;' alt=''>
+                            </div>
+                            <div class='fig-label'>flim</div>
+                        </div>
+                    </div>`
+            },
+            {
+                eyebrow: '03',
+                title:   'Each trial shows two friends — and what each one eats',
+                body:    'For example:',
+                figure:  `
+                    <div class='learn-stage' style='padding:8px 0 0;'>
+                        <div class='learn-frame' style='box-shadow:none;'>
+                            <div class='pair'>
+                                <div class='alien-slot'>
+                                    <div class='alien-img-wrap' style='width:160px; height:160px;'>
+                                        <img src='${exImgA}' class='alien-img' alt=''>
+                                    </div>
+                                    <div class='behavior ${revealed ? 'revealed' : ''}' id='intro-bwrap-a'>
+                                        <div class='behavior-plate'>
+                                            <img src='${exIconA}' class='behavior-icon' alt='${exLabelA}'>
+                                            <span class='behavior-name'>${exLabelA}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class='bond'><div class='bond-line'></div></div>
+                                <div class='alien-slot'>
+                                    <div class='alien-img-wrap' style='width:160px; height:160px;'>
+                                        <img src='${exImgB}' class='alien-img' alt=''>
+                                    </div>
+                                    <div class='behavior ${revealed ? 'revealed' : ''}' id='intro-bwrap-b'>
+                                        <div class='behavior-plate'>
+                                            <img src='${exIconB}' class='behavior-icon' alt='${exLabelB}'>
+                                            <span class='behavior-name'>${exLabelB}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>`
+            }
+        ];
+        var p = pages[page];
+        var dots = pages.map(function(_, i) {
+            return `<div class='intro-dot ${i === page ? 'active' : ''}'></div>`;
+        }).join('');
+        var nextLabel = page === pages.length - 1 ? "I'm ready" : 'Next';
+        var lockSpan = secs > 0 ? `<span class='lock-count'>(${secs}s)</span>` : '';
+
+        return `
+            <div class='page-inner'>
+                <div class='card card-narrow'>
+                    <div class='eyebrow swing-in d-1'>${p.eyebrow}</div>
+                    <h1 class='swing-in d-2'>${p.title}</h1>
+                    <p class='lead swing-in d-3' style='color:var(--ink-2);'>${p.body}</p>
+                    <div class='swing-in d-4'>${p.figure}</div>
+                    <div class='intro-nav'>
+                        <button class='btn btn-ghost' id='intro-back' ${page === 0 ? 'disabled' : ''}>← Back</button>
+                        <div class='intro-dots'>${dots}</div>
+                        <button class='btn' id='intro-next' ${secs > 0 ? 'disabled' : ''}>${nextLabel} ${lockSpan}</button>
                     </div>
-                    <div class='pair-connector'><div class='pair-line'></div></div>
-                    <div class='alien-card'>
-                        <!-- <div class='alien-name'>${exNameB}</div> -->
-                        <div class='alien-img-wrap'>
-                            <img src='${exImgB}' class='alien-img'>
-                        </div>
-                        <div class='behavior-wrap'>
-                            <img src='${exIconB}' class='behavior-icon' alt='${exLabelB}'>
-                            <span class='behavior-label'>${exLabelB}</span>
-                        </div>
-                    </div>
                 </div>
-            </div>
-        </div>`
-    ];
+            </div>`;
+    }
 
     var compRetries = 0;
-    var reshowInstructions = false;  // shared between comp check and loop fn
+    var reshowInstructions = false;
 
-    // 5s delay per page — resets on each page nav
     var overviewInstructions = {
-        type: jsPsychInstructions,
-        pages: overviewPages,
-        show_clickable_nav: true,
-        allow_keys: false,
-        allow_backward: true,
-        on_load: function() { lockInstructionsNext(5); },
-        on_page_change: function() {
-            lockInstructionsNext(5);
-            // example pair page has .behavior-wrap elements — reveal food after a delay
-            var wraps = document.querySelectorAll('.behavior-wrap');
-            if (wraps.length > 0) {
-                setTimeout(function() {
-                    wraps.forEach(function(el) { el.classList.add('revealed'); });
-                }, 1500);
-            }
-        }
-    };
-
-    var comprehensionCheck = {
         type: jsPsychHtmlButtonResponse,
         stimulus: '',
         choices: [],
         response_ends_trial: false,
         on_load: function() {
-            var container = document.querySelector('#jspsych-content');
-            container.innerHTML = `
-                <div class='content-box prevent-select' style='max-width:700px; text-align:left;'>
-                    <p><b>1. When two aliens appear together on screen, that means...</b></p>
-                    <div style='margin-left:20px; text-align:left;'>
-                        <label style='display:block; margin-bottom:6px;'><input type='radio' name='q1' value='friends'> They are friends</label>
-                        <label style='display:block; margin-bottom:6px;'><input type='radio' name='q1' value='same_color'> They are the same color</label>
-                        <label style='display:block; margin-bottom:6px;'><input type='radio' name='q1' value='same_food'> They eat the same food</label>
+            _introPage   = 0;
+            _introSecs   = 5;
+            _introReveal = false;
+
+            function render() {
+                var container = document.querySelector('.jspsych-html-button-response-stimulus');
+                if (!container) container = document.querySelector('#jspsych-content');
+                container.innerHTML = buildIntroHTML(_introPage, _introSecs, _introReveal);
+                bindIntroNav();
+            }
+
+            function startCountdown() {
+                clearInterval(_introTimer);
+                clearTimeout(_introRevealTimer);
+                _introSecs = 5;
+                _introReveal = false;
+                _introTimer = setInterval(function() {
+                    _introSecs = Math.max(0, _introSecs - 1);
+                    var btn = document.getElementById('intro-next');
+                    if (btn) {
+                        if (_introSecs > 0) {
+                            btn.disabled = true;
+                            btn.innerHTML = (_introPage === 2 ? "I'm ready" : 'Next') + ` <span class='lock-count'>(${_introSecs}s)</span>`;
+                        } else {
+                            clearInterval(_introTimer);
+                            btn.disabled = false;
+                            btn.innerHTML = _introPage === 2 ? "I'm ready" : 'Next';
+                        }
+                    }
+                }, 1000);
+                // page 3: reveal food after 1500ms
+                if (_introPage === 2) {
+                    _introRevealTimer = setTimeout(function() {
+                        _introReveal = true;
+                        var wa = document.getElementById('intro-bwrap-a');
+                        var wb = document.getElementById('intro-bwrap-b');
+                        if (wa) wa.classList.add('revealed');
+                        if (wb) wb.classList.add('revealed');
+                    }, 1500);
+                }
+            }
+
+            function bindIntroNav() {
+                var backBtn = document.getElementById('intro-back');
+                var nextBtn = document.getElementById('intro-next');
+                if (backBtn) backBtn.addEventListener('click', function() {
+                    if (_introPage > 0) { _introPage--; render(); startCountdown(); }
+                });
+                if (nextBtn) nextBtn.addEventListener('click', function() {
+                    if (_introPage < 2) { _introPage++; render(); startCountdown(); }
+                    else { clearInterval(_introTimer); clearTimeout(_introRevealTimer); jsPsych.finishTrial(); }
+                });
+            }
+
+            render();
+            startCountdown();
+        }
+    };
+
+    var comprehensionCheck = {
+        type: jsPsychHtmlButtonResponse,
+        stimulus: `
+            <div class='page-inner'>
+                <div class='card card-narrow'>
+                    <div class='eyebrow swing-in d-1'>Quick check</div>
+                    <h1 class='swing-in d-2' style='font-size:28px;'>A few quick questions before we start</h1>
+
+                    <div class='q-block'>
+                        <div class='q-label'>1. When two aliens appear together on screen, that means…</div>
+                        <div class='choice-list' id='q1-list'>
+                            <div class='choice' data-q='q1' data-v='friends'><div class='choice-radio'></div><div class='choice-text'>They are friends</div></div>
+                            <div class='choice' data-q='q1' data-v='same_color'><div class='choice-radio'></div><div class='choice-text'>They are the same color</div></div>
+                            <div class='choice' data-q='q1' data-v='same_food'><div class='choice-radio'></div><div class='choice-text'>They eat the same food</div></div>
+                        </div>
                     </div>
 
-                    <p style='margin-top:20px;'><b>2. Which of the following are <b>NOT</b> one of the food items that the aliens eat?</b></p>
-                    <div style='margin-left:20px; text-align:left;'>
-                        <label style='display:block; margin-bottom:6px;'><input type='radio' name='q2' value='Bubba'>Bubba</label>
-                        <label style='display:block; margin-bottom:6px;'><input type='radio' name='q2' value='Glorp'>Glorp</label>
-                        <label style='display:block; margin-bottom:6px;'><input type='radio' name='q2' value='Flim'>Flim</label>
+                    <div class='q-block'>
+                        <div class='q-label'>2. Which of the following is <em>not</em> a food the aliens eat?</div>
+                        <div class='choice-list' id='q2-list'>
+                            <div class='choice' data-q='q2' data-v='Bubba'><div class='choice-radio'></div><div class='choice-text'>Bubba</div></div>
+                            <div class='choice' data-q='q2' data-v='Glorp'><div class='choice-radio'></div><div class='choice-text'>Glorp</div></div>
+                            <div class='choice' data-q='q2' data-v='Flim'><div class='choice-radio'></div><div class='choice-text'>Flim</div></div>
+                        </div>
                     </div>
 
-                    <p style='margin-top:20px;'><b>3. How many aliens will you learn about?</b></p>
-                    <div style='margin-left:20px; text-align:left;'>
-                        <label style='display:block; margin-bottom:6px;'><input type='radio' name='q3' value='4'> 4</label>
-                        <label style='display:block; margin-bottom:6px;'><input type='radio' name='q3' value='8'> 8</label>
-                        <label style='display:block; margin-bottom:6px;'><input type='radio' name='q3' value='20'> 20</label>
+                    <div class='q-block' style='margin-bottom:8px;'>
+                        <div class='q-label'>3. How many aliens will you learn about?</div>
+                        <div class='choice-list' id='q3-list'>
+                            <div class='choice' data-q='q3' data-v='4'><div class='choice-radio'></div><div class='choice-text'>4</div></div>
+                            <div class='choice' data-q='q3' data-v='8'><div class='choice-radio'></div><div class='choice-text'>8</div></div>
+                            <div class='choice' data-q='q3' data-v='20'><div class='choice-radio'></div><div class='choice-text'>20</div></div>
+                        </div>
                     </div>
 
-                    <div class='comp-error' id='comp-error'>
-                        Some answers were incorrect. Please review the instructions and try again.
+                    <div class='comp-error' id='comp-error'></div>
+                    <div class='btn-row' style='margin-top:24px;'>
+                        <button class='btn' id='comp-submit' disabled>Submit</button>
                     </div>
-                    <div style='text-align:center; margin-top:24px;'>
-                        <button class='jspsych-btn' id='comp-submit'>Submit</button>
-                    </div>
-                </div>`;
+                </div>
+            </div>`,
+        choices: [],
+        response_ends_trial: false,
+        on_load: function() {
+            var answers = {};
+
+            document.querySelectorAll('.choice').forEach(function(el) {
+                el.addEventListener('click', function() {
+                    var q = el.dataset.q, v = el.dataset.v;
+                    // deselect siblings
+                    document.querySelectorAll('.choice[data-q="' + q + '"]').forEach(function(s) {
+                        s.classList.remove('selected');
+                    });
+                    el.classList.add('selected');
+                    answers[q] = v;
+                    document.getElementById('comp-submit').disabled = !(answers.q1 && answers.q2 && answers.q3);
+                });
+            });
 
             document.getElementById('comp-submit').addEventListener('click', function() {
-                var q1 = document.querySelector('input[name="q1"]:checked');
-                var q2 = document.querySelector('input[name="q2"]:checked');
-                var q3 = document.querySelector('input[name="q3"]:checked');
-
-                if (!q1 || !q2 || !q3) {
-                    document.getElementById('comp-error').textContent =
-                        'Please answer all three questions.';
-                    document.getElementById('comp-error').style.display = 'block';
-                    return;
-                }
-
-                var correct = q1.value === 'friends' && q2.value === 'Bubba' && q3.value === '8';
+                var correct = answers.q1 === 'friends' && answers.q2 === 'Bubba' && answers.q3 === '8';
                 if (!correct) {
                     compRetries++;
                     sessionData.attention_flags.failed_comprehension_retries = compRetries;
+                    var errEl = document.getElementById('comp-error');
+                    errEl.style.display = 'block';
                     if (compRetries >= COMP_CHECK_MAX_RETRIES) {
-                        // max retries — flag + proceed
+                        errEl.textContent = 'Max retries reached. Proceeding to the study.';
                         reshowInstructions = false;
-                        document.getElementById('comp-error').textContent =
-                            'Max retries reached. Proceeding to the study.';
-                        document.getElementById('comp-error').style.display = 'block';
-                        setTimeout(() => jsPsych.finishTrial(), 1500);
+                        setTimeout(function() { jsPsych.finishTrial(); }, 1500);
                     } else {
-                        document.getElementById('comp-error').textContent =
-                            `Some answers were incorrect. Please re-read the instructions and try again. (Attempt ${compRetries + 1} of ${COMP_CHECK_MAX_RETRIES})`;
-                        document.getElementById('comp-error').style.display = 'block';
+                        errEl.textContent = `Some answers were incorrect. Please re-read the instructions and try again. (Attempt ${compRetries + 1} of ${COMP_CHECK_MAX_RETRIES})`;
                         reshowInstructions = true;
-                        setTimeout(() => jsPsych.finishTrial(), 1200);
+                        setTimeout(function() { jsPsych.finishTrial(); }, 1200);
                     }
                 } else {
                     reshowInstructions = false;
@@ -367,12 +527,9 @@ function initStudy(graphData, condition) {
         }
     };
 
-    // loop node: re-show instructions until passed (or max retries)
     var comprehensionLoop = {
         timeline: [overviewInstructions, comprehensionCheck],
-        loop_function: function() {
-            return reshowInstructions;
-        }
+        loop_function: function() { return reshowInstructions; }
     };
 
 
@@ -380,31 +537,84 @@ function initStudy(graphData, condition) {
     // PHASE 1 — LEARNING
     // ══════════════════════════════════════════════════════════════
     var phase1Instructions = {
-        type: jsPsychInstructions,
-        pages: [`
-            <div class='content-box'>
-                <p>⚠️ Sometimes an alien will appear <b>upside-down</b> ⚠️</p>
-                <p>When that happens, press the <b>SPACEBAR</b> right away.</p>
-            </div>`],
-        show_clickable_nav: true,
-        allow_keys: false,
-        on_load: function() { lockInstructionsNext(5); },
-        on_page_change: function() { lockInstructionsNext(5); }
+        type: jsPsychHtmlButtonResponse,
+        stimulus: `
+            <div class='page-inner'>
+                <div class='card card-narrow' style='text-align:center;'>
+                    <h1 class='swing-in d-2'>Sometimes an alien will appear upside-down</h1>
+                    <p class='lead swing-in d-3' style='color:var(--ink-2);'>When that happens, press the
+                        <kbd style='font-family:var(--font-mono,monospace); background:var(--bg-2);
+                            border:1px solid var(--line); padding:2px 10px; border-radius:6px;
+                            font-size:14px; font-weight:600;'>SPACE</kbd> bar right away
+                    </p>
+                    <div class='intro-figure' style='margin:24px 0 12px;'>
+                        <div class='intro-fig-item'>
+                            <div class='alien-img-wrap' style='width:160px; height:160px;'>
+                                <img src='stimuli/aliens/alien_1_green.png' class='alien-img' alt=''>
+                            </div>
+                            <div class='fig-label' style='color:var(--ink-3);'>normal</div>
+                        </div>
+                        <div class='intro-or'>vs</div>
+                        <div class='intro-fig-item'>
+                            <div class='alien-img-wrap upside-down' style='width:160px; height:160px;'>
+                                <img src='stimuli/aliens/alien_2_green.png' class='alien-img' alt=''>
+                            </div>
+                            <div class='fig-label' style='color:var(--ink);'>press SPACE</div>
+                        </div>
+                    </div>
+                    <div class='btn-row' style='margin-top:16px;'>
+                        <button class='btn' id='p1-start-btn' disabled>Start <span class='lock-count' id='p1-lock-count'>(5s)</span></button>
+                    </div>
+                </div>
+            </div>`,
+        choices: [],
+        response_ends_trial: false,
+        on_load: function() {
+            setPhase('learning', { total: LEARNING_RUNS, activeIdx: 0, label: 'Run 1 of ' + LEARNING_RUNS });
+            var secs = 5;
+            var t = setInterval(function() {
+                secs = Math.max(0, secs - 1);
+                var lock = document.getElementById('p1-lock-count');
+                var btn  = document.getElementById('p1-start-btn');
+                if (!btn) { clearInterval(t); return; }
+                if (secs > 0) {
+                    lock.textContent = '(' + secs + 's)';
+                } else {
+                    clearInterval(t);
+                    lock.textContent = '';
+                    btn.disabled = false;
+                }
+            }, 1000);
+            document.getElementById('p1-start-btn').addEventListener('click', function() {
+                clearInterval(t);
+                jsPsych.finishTrial();
+            });
+        }
     };
 
     var readyToStart = {
         type: jsPsychHtmlButtonResponse,
         stimulus: `
-            <div class='content-box' style='text-align:center;'>
-                <p style='font-size:20px; font-weight:600;'>You're all set!</p>
-                <p style='font-size:17px; color:#555;'>Click below when you're ready to start the experiment.</p>
+            <div class='page-inner'>
+                <div class='card card-narrow' style='text-align:center;'>
+                    <h1 style='font-size:26px;'>You're all set!</h1>
+                    <p class='muted'>Click below when you're ready to start the experiment.</p>
+                    <div class='btn-row' style='margin-top:20px;'>
+                        <button class='btn btn-lg' id='ready-btn'>Start experiment</button>
+                    </div>
+                </div>
             </div>`,
-        choices: ['Start Experiment']
+        choices: [],
+        response_ends_trial: false,
+        on_load: function() {
+            document.getElementById('ready-btn').addEventListener('click', function() {
+                jsPsych.finishTrial();
+            });
+        }
     };
 
-    // pre-build all learning trials (10 runs × edges, with 12.5% upside-down)
+    // pre-build all learning trials
     var sessionTrialIdx = 0;
-    var upsideDownTrials = 0, upsideDownHits = 0;
     var learningBlock = [];
 
     for (var run = 0; run < LEARNING_RUNS; run++) {
@@ -412,7 +622,6 @@ function initStudy(graphData, condition) {
         runEdges.forEach(function(edge) {
             var isUD = Math.random() < UPSIDE_DOWN_RATE;
             var udNode = isUD ? edge[Math.floor(Math.random() * 2)] : null;
-            if (isUD) upsideDownTrials++;
 
             learningBlock.push(buildLearningTrial({
                 edge, run,
@@ -423,27 +632,44 @@ function initStudy(graphData, condition) {
             }, jsPsych));
         });
         if (run < LEARNING_RUNS - 1) {
-            learningBlock.push(buildRunBreak(run + 1, LEARNING_RUNS, jsPsych));
+            (function(r) {
+                learningBlock.push(buildRunBreak(r + 1, LEARNING_RUNS, jsPsych, function() {
+                    setPhase('learning', {
+                        total: LEARNING_RUNS,
+                        activeIdx: r + 1,
+                        label: 'Run ' + (r + 2) + ' of ' + LEARNING_RUNS
+                    });
+                }));
+            })(run);
         }
     }
 
-    // compute attention hit rate after phase 1 finishes
     var phase1Done = {
         type: jsPsychHtmlButtonResponse,
         stimulus: `
-            <div class='content-box' style='text-align:center;'>
-                <p style='font-size:18px; color:#555;'>Learning phase complete. Next: a short memory check.</p>
+            <div class='page-inner'>
+                <div class='card card-narrow' style='text-align:center;'>
+                    <h1 style='font-size:26px;'>Learning phase complete.</h1>
+                    <p class='muted'>Next: a short memory check.</p>
+                    <div class='btn-row' style='margin-top:20px;'>
+                        <button class='btn' id='p1done-btn'>Continue</button>
+                    </div>
+                </div>
             </div>`,
-        choices: ['Continue'],
+        choices: [],
+        response_ends_trial: false,
         on_load: function() {
-            // compute attention hit rate from logged trials
+            setPhase('memory');
             var p1trials = sessionData.phase_1_learning.trials;
-            var udTrials = p1trials.filter(t => t.upside_down);
-            var hits = udTrials.filter(t => t.attention_response === 'space');
+            var udTrials = p1trials.filter(function(t) { return t.upside_down; });
+            var hits = udTrials.filter(function(t) { return t.attention_response === 'space'; });
             var hitRate = udTrials.length > 0 ? hits.length / udTrials.length : 1;
             sessionData.phase_1_learning.attention_check_hit_rate = Math.round(hitRate * 100) / 100;
             sessionData.attention_flags.upside_down_hit_rate = hitRate;
             logToBrowser('attention hit rate', hitRate);
+            document.getElementById('p1done-btn').addEventListener('click', function() {
+                jsPsych.finishTrial();
+            });
         }
     };
 
@@ -452,110 +678,126 @@ function initStudy(graphData, condition) {
     // PHASE 2 — VALIDATION
     // ══════════════════════════════════════════════════════════════
     var phase2Instructions = {
-        type: jsPsychInstructions,
-        pages: [`
-            <div class='content-box'>
-                <p>Now we'll check what you remember. You'll answer three sets of questions:</p>
-                <ul>
-                    <li>Which aliens were friends?</li>
-                    <li>Is each alien green or orange?</li>
-                    <li>What does each alien eat?</li>
-                </ul>
-            </div>`],
-        show_clickable_nav: true,
-        allow_keys: false,
-        on_load: function() { lockInstructionsNext(5); },
-        on_page_change: function() { lockInstructionsNext(5); }
-    };
-
-    // edge recognition header
-    var edgeRecHeader = {
         type: jsPsychHtmlButtonResponse,
         stimulus: `
-            <div class='content-box' style='text-align:center;'>
-                <p style='font-size:17px; color:#555;'>Were these two aliens friends with each other?</p>
+            <div class='page-inner'>
+                <div class='card card-narrow'>
+                    <div class='eyebrow swing-in d-1'>Memory check</div>
+                    <h1 class='swing-in d-2'>Now we'll see what you remember.</h1>
+                    <p class='lead swing-in d-3' style='color:var(--ink-2);'>You'll answer three short sets of questions:</p>
+                    <div style='display:flex; flex-direction:column; gap:12px; margin:20px 0 4px;'>
+                        ${[['01','Which aliens were friends?'],['02','Is each alien green or orange?'],['03','What does each alien eat?']].map(function(item) {
+                            return `<div style='display:flex; align-items:center; gap:16px; padding:14px 18px;
+                                background:var(--bg-2); border-radius:var(--radius); border:1px solid var(--line);'>
+                                <span style='font-family:var(--font-mono,monospace); font-size:12px;
+                                    color:var(--ink-3); font-weight:700; letter-spacing:0.08em;'>${item[0]}</span>
+                                <span style='font-size:16px; color:var(--ink);'>${item[1]}</span>
+                            </div>`;
+                        }).join('')}
+                    </div>
+                    <div class='btn-row' style='margin-top:24px;'>
+                        <button class='btn' id='p2-start-btn' disabled>Begin <span class='lock-count' id='p2-lock'>(5s)</span></button>
+                    </div>
+                </div>
             </div>`,
-        choices: ['Start']
+        choices: [],
+        response_ends_trial: false,
+        on_load: function() {
+            var secs = 5;
+            var t = setInterval(function() {
+                secs = Math.max(0, secs - 1);
+                var lock = document.getElementById('p2-lock');
+                var btn  = document.getElementById('p2-start-btn');
+                if (!btn) { clearInterval(t); return; }
+                if (secs > 0) {
+                    lock.textContent = '(' + secs + 's)';
+                } else {
+                    clearInterval(t);
+                    lock.textContent = '';
+                    btn.disabled = false;
+                }
+            }, 1000);
+            document.getElementById('p2-start-btn').addEventListener('click', function() {
+                clearInterval(t);
+                jsPsych.finishTrial();
+            });
+        }
     };
 
     var edgeRecTrials = buildEdgeRecTrials(
         graphData.edge_recognition_trials, nameMapping, species, jsPsych, sessionData
     );
-
-    var speciesHeader = {
-        type: jsPsychHtmlButtonResponse,
-        stimulus: `
-            <div class='content-box' style='text-align:center;'>
-                <p style='font-size:17px; color:#555;'>Is each alien green or orange?</p>
-            </div>`,
-        choices: ['Start']
-    };
-
-    var speciesRecallTrials = buildSpeciesRecallTrials(
-        species, nameMapping, jsPsych, sessionData
-    );
-
-    var behaviorHeader = {
-        type: jsPsychHtmlButtonResponse,
-        stimulus: `
-            <div class='content-box' style='text-align:center;'>
-                <p style='font-size:17px; color:#555;'>What does each alien eat?</p>
-            </div>`,
-        choices: ['Start']
-    };
-
-    var behaviorRecallTrials = buildBehaviorRecallTrials(
-        behavior, nameMapping, behaviorLabels, species, jsPsych, sessionData
-    );
-
-    // // compute exclusion flags after phase 2
-    // var phase2Done = {
-    //     type: jsPsychHtmlButtonResponse,
-    //     stimulus: `
-    //         <div class='content-box' style='text-align:center;'>
-    //             <p style='font-size:18px; color:#555;'>Memory check complete. Next up: 5 new aliens.</p>
-    //         </div>`,
-    //     choices: ['Continue'],
-    //     on_load: function() {
-    //         var val = sessionData.phase_2_validation;
-
-    //         var erCorrect = val.edge_recognition.filter(t => t.correct).length / val.edge_recognition.length;
-    //         var spCorrect = val.species_recall.filter(t => t.correct).length / val.species_recall.length;
-    //         var bhCorrect = val.behavior_recall.filter(t => t.correct).length / val.behavior_recall.length;
-
-    //         sessionData.attention_flags.below_threshold_edge_recognition = erCorrect < THRESHOLD_EDGE_REC;
-    //         sessionData.attention_flags.below_threshold_species           = spCorrect < THRESHOLD_SPECIES;
-    //         sessionData.attention_flags.below_threshold_behavior          = bhCorrect < THRESHOLD_BEHAVIOR;
-
-    //         logToBrowser('validation accuracy', { erCorrect, spCorrect, bhCorrect });
-    //     }
-    // };
+    var speciesRecallTrials = buildSpeciesRecallTrials(species, nameMapping, jsPsych, sessionData);
+    var behaviorRecallTrials = buildBehaviorRecallTrials(behavior, nameMapping, behaviorLabels, species, jsPsych, sessionData);
 
 
     // ══════════════════════════════════════════════════════════════
     // PHASE 3 — TRANSFER
     // ══════════════════════════════════════════════════════════════
     var phase3Instructions = {
-        type: jsPsychInstructions,
-        pages: [`
-            <div class='content-box'>
-                <p>You'll now meet <b>2 new aliens</b> you haven't seen before.</p>
-                <p>Your job is to determine what they like to eat.</p>
-                <p>For each one, you can choose <b>one thing</b> to reveal about them (their color, or who their friends are), to help you decide.</p>
-            </div>`],
-        show_clickable_nav: true,
-        allow_keys: false,
-        on_load: function() { lockInstructionsNext(5); },
-        on_page_change: function() { lockInstructionsNext(5); }
+        type: jsPsychHtmlButtonResponse,
+        stimulus: `
+            <div class='page-inner'>
+                <div class='card card-narrow'>
+                    <div class='eyebrow swing-in d-1'>New aliens</div>
+                    <h1 class='swing-in d-2'>You're about to meet two new aliens.</h1>
+                    <p class='lead swing-in d-3' style='color:var(--ink-2);'>Your job: figure out what each one likes to eat.</p>
+                    <p style='color:var(--ink-2);'>
+                        For each new alien, you'll get to choose <strong>one thing</strong> to learn about them —
+                        either their <span style='color:var(--species-green); font-weight:600;'>color</span>,
+                        or who their <strong>friends</strong> are — and use that to make your best guess.
+                    </p>
+                    <div class='btn-row' style='margin-top:24px;'>
+                        <button class='btn' id='p3-start-btn' disabled>Continue <span class='lock-count' id='p3-lock'>(5s)</span></button>
+                    </div>
+                </div>
+            </div>`,
+        choices: [],
+        response_ends_trial: false,
+        on_load: function() {
+            setPhase('transfer', { total: 2, activeIdx: 0, label: 'Alien 1 of 2' });
+            var secs = 5;
+            var t = setInterval(function() {
+                secs = Math.max(0, secs - 1);
+                var lock = document.getElementById('p3-lock');
+                var btn  = document.getElementById('p3-start-btn');
+                if (!btn) { clearInterval(t); return; }
+                if (secs > 0) {
+                    lock.textContent = '(' + secs + 's)';
+                } else {
+                    clearInterval(t);
+                    lock.textContent = '';
+                    btn.disabled = false;
+                }
+            }, 1000);
+            document.getElementById('p3-start-btn').addEventListener('click', function() {
+                clearInterval(t);
+                jsPsych.finishTrial();
+            });
+        }
     };
 
-    // random alien designs for the 5 transfer aliens (greyed out)
     var transferAlienIndices = jsPsych.randomization.sampleWithoutReplacement([0,1,2,3,4,5,6,7], 2);
-
     var transferTrials = buildTransferTrials({
         condition, species, behavior, nameMapping, behaviorLabels,
         graphData, sessionData, transferAlienIndices
     }, jsPsych);
+
+    // substep tracking for transfer aliens
+    if (transferTrials[0]) {
+        var _origT0 = transferTrials[0].on_load;
+        transferTrials[0].on_load = function() {
+            setPhase('transfer', { total: 2, activeIdx: 0, label: 'Alien 1 of 2' });
+            if (_origT0) _origT0();
+        };
+    }
+    if (transferTrials[1]) {
+        var _origT1 = transferTrials[1].on_load;
+        transferTrials[1].on_load = function() {
+            setPhase('transfer', { total: 2, activeIdx: 1, label: 'Alien 2 of 2' });
+            if (_origT1) _origT1();
+        };
+    }
 
 
     // ══════════════════════════════════════════════════════════════
@@ -565,13 +807,17 @@ function initStudy(graphData, condition) {
         type: jsPsychSurveyHtmlForm,
         preamble: '',
         html: `
-            <div class='strategy-box prevent-select'>
-                <p style='font-size:18px;'>In your own words, how did you decide what each new alien eats?
-                What information did you find most useful?</p>
-                <p>
-                    <textarea name='strategy' rows='6' cols='70'
-                        placeholder='e.g. "I looked at whether the new alien seemed similar to..."'></textarea>
-                </p>
+            <div class='page-inner prevent-select'>
+                <div class='card card-narrow'>
+                    <div class='eyebrow swing-in d-1'>In your own words</div>
+                    <h1 class='swing-in d-2' style='font-size:28px;'>How did you decide what each new alien eats?</h1>
+                    <p class='muted swing-in d-3'>
+                        What information did you find most useful? There are no wrong answers — we're just curious about your reasoning.
+                    </p>
+                    <textarea name='strategy' class='strategy-textarea'
+                        placeholder='e.g. "I looked at whether the new alien seemed similar to..."'
+                        rows='6'></textarea>
+                </div>
             </div>`,
         button_label: 'Continue',
         on_load: function() {
@@ -579,6 +825,12 @@ function initStudy(graphData, condition) {
             document.querySelector('form').addEventListener('submit', function() {
                 sessionData.phase_4_strategy.time_on_screen_ms = Math.round(performance.now() - t0);
             });
+            // style jsPsych's submit button
+            var submitBtn = document.querySelector('#jspsych-survey-html-form-next');
+            if (submitBtn) {
+                submitBtn.className = 'btn';
+                submitBtn.style.marginTop = '18px';
+            }
         },
         on_finish: function(data) {
             sessionData.phase_4_strategy.free_text = data.response.strategy || '';
@@ -593,7 +845,15 @@ function initStudy(graphData, condition) {
         type: jsPsychSurveyHtmlForm,
         preamble: '',
         html: getDemographicsHTML(),
-        button_label: 'Continue',
+        button_label: 'Submit',
+        on_load: function() {
+            var submitBtn = document.querySelector('#jspsych-survey-html-form-next');
+            if (submitBtn) {
+                submitBtn.className = 'btn';
+                submitBtn.style.marginTop = '28px';
+                submitBtn.style.float = 'right';
+            }
+        },
         on_finish: function(data) { processDemographics(data, jsPsych); }
     };
 
@@ -606,8 +866,8 @@ function initStudy(graphData, condition) {
         console.error('DataPipe save failed', label, saveData.result);
         window.onbeforeunload = null;
         document.body.innerHTML = `
-            <div style='font-family:Helvetica Neue,Arial,sans-serif; text-align:center;
-                margin:15vh auto; max-width:720px; color:#333;'>
+            <div style='font-family:var(--font-body,Helvetica Neue,Arial,sans-serif); text-align:center;
+                margin:15vh auto; max-width:720px; color:var(--ink,#333);'>
                 <p style='font-size:24px; font-weight:600;'>We couldn't save your data.</p>
                 <p style='font-size:16px; color:#666; line-height:1.5;'>
                     The upload to DataPipe was rejected. Please don't close this page.
@@ -622,66 +882,71 @@ function initStudy(graphData, condition) {
         type: jsPsychPipe,
         action: 'save',
         experiment_id: DATAPIPE_EXPERIMENT_ID,
-        filename: () => getFilePrefix(jsPsych) + '.json',
-        data_string: () => {
+        filename: function() { return getFilePrefix(jsPsych) + '.json'; },
+        data_string: function() {
             sessionData.end_time = new Date().toISOString();
             return JSON.stringify(sessionData, null, 2);
         },
-        wait_message: "<p style='text-align:center; color:#555; font-family:Helvetica Neue,Arial,sans-serif;'>Saving your data — please don't close this page...</p>",
+        wait_message: "<p style='text-align:center; color:var(--ink-2,#555); font-family:inherit;'>Saving your data — please don't close this page…</p>",
         on_finish: function(data) { handleSaveResult(data, 'final save'); }
     };
 
     var completion = {
         type: jsPsychHtmlButtonResponse,
         stimulus: `
-            <div class='content-box' style='text-align:center;'>
-                <p style='font-size:24px; font-weight:600; margin-bottom:8px;'>Thank you so much!</p>
-                <p style='font-size:17px;'>Your responses have been saved and will help our research.</p>
-                <p style='color:#888; font-size:15px; margin-top:24px;'>
-                    You'll be redirected to Prolific automatically in a few seconds.<br>
-                    If nothing happens, <a href='${PROLIFIC_COMPLETION_URL}' style='color:#353633;'>click here</a>.
-                </p>
+            <div class='page-inner'>
+                <div class='card card-narrow complete-card'>
+                    <div class='check-circle'>
+                        <svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2.5'
+                            stroke-linecap='round' stroke-linejoin='round'>
+                            <polyline points='20 6 9 17 4 12'/>
+                        </svg>
+                    </div>
+                    <h1>Thank you!</h1>
+                    <p class='lead' style='color:var(--ink-2); text-align:center;'>
+                        Your responses have been saved and will help our research.
+                    </p>
+                    <p class='muted' style='text-align:center; margin-top:18px;'>
+                        You'll be redirected back to Prolific automatically in a few seconds.<br>
+                        If nothing happens, <a href='${PROLIFIC_COMPLETION_URL}' style='color:var(--ink);'>click here</a>.
+                    </p>
+                </div>
             </div>`,
         choices: [],
         response_ends_trial: false,
         on_load: function() {
+            var fill = document.getElementById('progress-fill');
+            if (fill) fill.style.width = '100%';
+            renderStepper('transfer');
             window.onbeforeunload = null;
             if (PROLIFIC_COMPLETION_URL && !TESTING_MODE) {
-                setTimeout(() => { window.location.href = PROLIFIC_COMPLETION_URL; }, 3000);
+                setTimeout(function() { window.location.href = PROLIFIC_COMPLETION_URL; }, 3000);
             }
         }
     };
 
-    // ── progress bar ─────────────────────────────────────────────
-    // rough total: consent + ~5 instructions + ~250 learning + 9 breaks + ~50 validation + 5 transfer + demo/strategy = ~325
+    // ── progress bar (updates frame-top fill) ─────────────────────
     var totalTrials = 325;
     var trialCount  = 0;
 
     function advanceProgress() {
         trialCount++;
-        jsPsych.progressBar.progress = Math.min(trialCount / totalTrials, 0.99);
+        var pct = Math.min(trialCount / totalTrials, 0.99);
+        var fill = document.getElementById('progress-fill');
+        if (fill) fill.style.width = (pct * 100) + '%';
     }
 
-    // add on_finish progress hooks to all learning + validation trials
     learningBlock.forEach(function(t) {
-        var origFinish = t.on_finish;
-        t.on_finish = function(data) {
-            advanceProgress();
-            if (origFinish) origFinish(data);
-        };
+        var orig = t.on_finish;
+        t.on_finish = function(data) { advanceProgress(); if (orig) orig(data); };
     });
     [...edgeRecTrials, ...speciesRecallTrials, ...behaviorRecallTrials].forEach(function(t) {
-        var origFinish = t.on_finish;
-        t.on_finish = function(data) {
-            advanceProgress();
-            if (origFinish) origFinish(data);
-        };
+        var orig = t.on_finish;
+        t.on_finish = function(data) { advanceProgress(); if (orig) orig(data); };
     });
 
 
-    // ── full timeline (conditional blocks for dev jump support) ──────
-    // _devStart: 0=full, 1=instructions, 2=ph1, 3=ph2, 4=ph3, 5=ph4, 6=ph5
-    // each block runs when its order >= _devStart
+    // ── full timeline ─────────────────────────────────────────────
     var timeline = [
         {
             timeline: [consent],
@@ -698,13 +963,19 @@ function initStudy(graphData, condition) {
         {
             timeline: (function() {
                 var blocks = jsPsych.randomization.shuffle([
-                    [edgeRecHeader].concat(edgeRecTrials),
-                    [speciesHeader].concat(speciesRecallTrials),
-                    [behaviorHeader].concat(behaviorRecallTrials)
+                    [].concat(edgeRecTrials),
+                    [].concat(speciesRecallTrials),
+                    [].concat(behaviorRecallTrials)
                 ]);
+                blocks.forEach(function(block, i) {
+                    var orig = block[0].on_load;
+                    block[0].on_load = function() {
+                        setPhase('memory', { total: 3, activeIdx: i, label: 'Section ' + (i + 1) + ' of 3' });
+                        if (orig) orig();
+                    };
+                });
                 return [phase2Instructions]
-                    .concat(blocks[0]).concat(blocks[1]).concat(blocks[2])
-                    // .concat([phase2Done]);
+                    .concat(blocks[0]).concat(blocks[1]).concat(blocks[2]);
             })(),
             conditional_function: function() { return _devStart <= 3; }
         },
