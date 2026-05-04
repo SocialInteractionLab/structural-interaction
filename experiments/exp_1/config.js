@@ -3,7 +3,7 @@
 const TESTING_MODE = true;
 
 // theme: 'playful' | 'botanical' | 'bauhaus'
-window.EXPERIMENT_THEME = 'playful';
+window.EXPERIMENT_THEME = 'bauhaus';
 
 // datapipe / osf IDs
 const DATAPIPE_EXPERIMENT_ID = 'JYEBdZJ7ca6L';

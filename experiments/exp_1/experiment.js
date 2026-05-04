@@ -740,12 +740,11 @@ function initStudy(graphData, condition) {
             <div class='page-inner'>
                 <div class='card card-narrow'>
                     <div class='eyebrow swing-in d-1'>New aliens</div>
-                    <h1 class='swing-in d-2'>You're about to meet two new aliens.</h1>
-                    <p class='lead swing-in d-3' style='color:var(--ink-2);'>Your job: figure out what each one likes to eat.</p>
+                    <h1 class='swing-in d-2'>You'll now meet two new aliens</h1>
+                    <p class='lead swing-in d-3' style='color:var(--ink-2);'>Your job will be to figure out what food each one likes to eat</p>
                     <p style='color:var(--ink-2);'>
                         For each new alien, you'll get to choose <strong>one thing</strong> to learn about them —
-                        either their <span style='color:var(--species-green); font-weight:600;'>color</span>,
-                        or who their <strong>friends</strong> are — and use that to make your best guess.
+                        either their color or who their friends are — and use that to make your best guess
                     </p>
                     <div class='btn-row' style='margin-top:24px;'>
                         <button class='btn' id='p3-start-btn' disabled>Continue <span class='lock-count' id='p3-lock'>(5s)</span></button>
