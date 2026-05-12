@@ -598,6 +598,7 @@ hr { border: none; border-top: 1px solid var(--line); margin: 28px 0; }
   animation: friend-in var(--t-slow) var(--ease-out) backwards;
 }
 .friend-card .alien-img-wrap { width: 72px; height: 72px; }
+.friend-card .alien-img { filter: grayscale(100%) brightness(0.95); }   /* mask species color — same as .novel-alien.unknown */
 .friend-pill {
   display: inline-flex; align-items: center; gap: 5px;
   font-size: 12.5px; font-weight: 600; color: var(--ink-2);
