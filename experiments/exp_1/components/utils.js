@@ -100,10 +100,26 @@ function applyProductionProtections(jsPsych) {
 }
 
 // image path helpers
-function speciesImg(nodeIdx, speciesInt) {
+// designs are named alien_01..alien_10 (zero-padded). per participant, 8 of the 10
+// learning designs are sampled and assigned to the 8 graph nodes via
+// window.nodeDesignMap (built in experiment.js). the remaining 2 designs are
+// held out for the transfer phase. alien_00_* is a featureless silhouette used
+// for transfer-trial friends.
+function alienImg(designNum, speciesInt) {
     var color = speciesInt === 0 ? 'green' : 'orange';
-    return `stimuli/aliens/alien_${nodeIdx + 1}_${color}.png`;
+    return `stimuli/aliens/alien_${String(designNum).padStart(2, '0')}_${color}.png`;
 }
+function speciesImg(nodeIdx, speciesInt) {
+    // route node index → design number via per-participant map
+    var designNum = (window.nodeDesignMap && window.nodeDesignMap[nodeIdx] != null)
+        ? window.nodeDesignMap[nodeIdx]
+        : nodeIdx + 1;  // fallback for any legacy caller
+    return alienImg(designNum, speciesInt);
+}
+// featureless friend silhouette — used in transfer trial so the friends cue
+// conveys only food, not species color
+var FEATURELESS_FRIEND_IMG = 'stimuli/aliens/alien_00_green.png';
+
 function behaviorIcon(behaviorInt, behaviorLabels) {
     return behaviorLabels[behaviorInt] === 'glorp' ? 'stimuli/food/glorp.svg' : 'stimuli/food/flim.svg';
 }

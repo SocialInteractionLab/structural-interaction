@@ -36,7 +36,10 @@ function buildTransferTrials(opts, jsPsych) {
     return shuffledTransferNames.map(function(novelName, trialIdx) {
         var novelSpecies   = speciesAssignments[trialIdx];
         var speciesLabel   = novelSpecies === 0 ? 'green' : 'orange';
-        var alienDesignIdx = opts.transferAlienIndices[trialIdx];
+        // design number for this transfer alien — drawn from the 2 designs held
+        // out from learning (passed in as opts.transferDesignNums)
+        var novelDesignNum = opts.transferDesignNums[trialIdx];
+        var novelDesignStr = String(novelDesignNum).padStart(2, '0');
         var alienColor     = novelSpecies === 0 ? 'green' : 'orange';
         var speciesColor   = novelSpecies === 0 ? 'var(--species-green)' : 'var(--species-orange)';
         var friendNodes    = sampleFriends(novelSpecies);
@@ -44,15 +47,16 @@ function buildTransferTrials(opts, jsPsych) {
         var icon0          = behaviorIcon(0, bLabels);
         var icon1          = behaviorIcon(1, bLabels);
 
-        // build friend cards HTML
+        // build friend cards HTML — friends are rendered with the featureless
+        // alien_00 silhouette so the "friends" cue conveys only food, not species
+        // color (keeps the friends-cue and color-cue fully orthogonal)
         var friendCardsHtml = friendNodes.map(function(n, fi) {
-            var fimg   = speciesImg(n, speciesArr[n]);
             var ficon  = behaviorIcon(behaviorArr[n], bLabels);
             var flabel = bLabels[behaviorArr[n]];
             return `
                 <div class='friend-card' style='animation-delay:${fi * 80}ms'>
                     <div class='alien-img-wrap'>
-                        <img src='${fimg}' class='alien-img' alt=''>
+                        <img src='${FEATURELESS_FRIEND_IMG}' class='alien-img' alt=''>
                     </div>
                     <div class='friend-pill'>
                         <img src='${ficon}' alt=''>${flabel}
@@ -68,7 +72,7 @@ function buildTransferTrials(opts, jsPsych) {
                     <div class='transfer-section' id='ts-cue'>
                         <div class='novel-alien unknown'>
                             <div class='alien-img-wrap'>
-                                <img src='stimuli/aliens/alien_${alienDesignIdx + 1}_green.png' class='alien-img' alt=''>
+                                <img src='stimuli/aliens/alien_${novelDesignStr}_green.png' class='alien-img' alt=''>
                             </div>
                             <div class='novel-tag'>a new alien &nbsp;·&nbsp; ${trialIdx + 1} of ${TRANSFER_NAMES.length}</div>
                         </div>
@@ -192,7 +196,7 @@ function buildTransferTrials(opts, jsPsych) {
                             <div class='reveal-label'>This alien's color</div>
                             <div style='display:flex; flex-direction:column; align-items:center; gap:10px;'>
                                 <div class='alien-img-wrap' style='width:160px; height:160px;'>
-                                    <img src='stimuli/aliens/alien_${alienDesignIdx + 1}_${alienColor}.png' class='alien-img' alt=''>
+                                    <img src='stimuli/aliens/alien_${novelDesignStr}_${alienColor}.png' class='alien-img' alt=''>
                                 </div>
                                 <div style='color:${speciesColor}; font-weight:700; font-size:16px;'>${speciesLabel} alien</div>
                             </div>`;

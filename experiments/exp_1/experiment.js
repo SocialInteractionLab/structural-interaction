@@ -152,6 +152,13 @@ function initStudy(graphData, condition) {
     var nameMapping   = {};
     shuffledNames.forEach(function(name, i) { nameMapping[i] = name; });
 
+    // design assignment — 10 alien designs (alien_01 .. alien_10). per participant,
+    // shuffle and split: 8 → learning nodes, 2 → held out as transfer aliens.
+    var shuffledDesigns    = jsPsych.randomization.shuffle([1,2,3,4,5,6,7,8,9,10]);
+    var nodeDesignMap      = shuffledDesigns.slice(0, 8);   // node index 0..7 → design number 1..10
+    var transferDesignNums = shuffledDesigns.slice(8);      // 2 held-out designs for transfer phase
+    window.nodeDesignMap   = nodeDesignMap;                 // speciesImg() reads this
+
     var behaviorSwap   = jsPsych.randomization.sampleWithoutReplacement([0, 1], 1)[0];
     var behaviorLabels = behaviorSwap === 0
         ? { 0: 'glorp', 1: 'flim' }
@@ -176,6 +183,8 @@ function initStudy(graphData, condition) {
         stimuli: {
             graph_id:               graphData.graph_id,
             graph_seed:             graphData.seed,
+            node_design_map:        nodeDesignMap,             // node 0..7 → alien design number (1..10)
+            transfer_design_nums:   transferDesignNums,        // 2 held-out design numbers used for transfer aliens
             alien_image_mapping:    Object.fromEntries(Object.entries(nameMapping).map(
                 function(_ref) { var node = _ref[0], name = _ref[1]; return [name, speciesImg(parseInt(node), species[node])]; }
             )),
@@ -283,14 +292,14 @@ function initStudy(graphData, condition) {
                     <div class='intro-figure'>
                         <div class='intro-fig-item'>
                             <div class='alien-img-wrap' style='width:160px; height:160px;'>
-                                <img src='stimuli/aliens/alien_1_green.png' class='alien-img' alt=''>
+                                <img src='stimuli/aliens/alien_01_green.png' class='alien-img' alt=''>
                             </div>
                             <div class='fig-label' style='color:var(--species-green);'>green</div>
                         </div>
                         <div class='intro-or'>or</div>
                         <div class='intro-fig-item'>
                             <div class='alien-img-wrap' style='width:160px; height:160px;'>
-                                <img src='stimuli/aliens/alien_1_orange.png' class='alien-img' alt=''>
+                                <img src='stimuli/aliens/alien_01_orange.png' class='alien-img' alt=''>
                             </div>
                             <div class='fig-label' style='color:var(--species-orange);'>orange</div>
                         </div>
@@ -550,14 +559,14 @@ function initStudy(graphData, condition) {
                     <div class='intro-figure' style='margin:24px 0 12px;'>
                         <div class='intro-fig-item'>
                             <div class='alien-img-wrap' style='width:160px; height:160px;'>
-                                <img src='stimuli/aliens/alien_1_green.png' class='alien-img' alt=''>
+                                <img src='stimuli/aliens/alien_01_green.png' class='alien-img' alt=''>
                             </div>
                             <div class='fig-label' style='color:var(--ink-3);'>normal</div>
                         </div>
                         <div class='intro-or'>vs</div>
                         <div class='intro-fig-item'>
                             <div class='alien-img-wrap upside-down' style='width:160px; height:160px;'>
-                                <img src='stimuli/aliens/alien_2_green.png' class='alien-img' alt=''>
+                                <img src='stimuli/aliens/alien_02_green.png' class='alien-img' alt=''>
                             </div>
                             <div class='fig-label' style='color:var(--ink);'>press SPACE</div>
                         </div>
@@ -776,10 +785,12 @@ function initStudy(graphData, condition) {
         }
     };
 
-    var transferAlienIndices = jsPsych.randomization.sampleWithoutReplacement([0,1,2,3,4,5,6,7], 2);
+    // 2 held-out designs become the two transfer aliens (order randomized)
+    var transferTrialDesignNums = jsPsych.randomization.shuffle([...transferDesignNums]);
     var transferTrials = buildTransferTrials({
         condition, species, behavior, nameMapping, behaviorLabels,
-        graphData, sessionData, transferAlienIndices
+        graphData, sessionData,
+        transferDesignNums: transferTrialDesignNums
     }, jsPsych);
 
     // substep tracking for transfer aliens
