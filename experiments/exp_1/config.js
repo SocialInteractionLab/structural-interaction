@@ -24,7 +24,7 @@ const LEARNING_RUNS      = 10;
 const UPSIDE_DOWN_RATE   = 0.125;  // 12.5% of trials have one upside-down alien
 
 // transfer phase
-const TRANSFER_FRIENDS_REVEALED = 4;
+const TRANSFER_FRIENDS_REVEALED = 3;
 
 // per-individual marker toggle — default off; names only for individuation
 const USE_PER_INDIVIDUAL_MARKER = false;

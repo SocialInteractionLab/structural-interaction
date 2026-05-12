@@ -2,32 +2,30 @@
 // sections dim when participant moves past them; binary choice is final
 
 function buildTransferTrials(opts, jsPsych) {
-    var speciesArr  = opts.species;
-    var behaviorArr = opts.behavior;
-    var nameMap     = opts.nameMapping;
-    var bLabels     = opts.behaviorLabels;
+    // friends in this trial are synthetic (not graph-derived), so the only
+    // participant-level state we need is the food-label mapping.
+    var bLabels = opts.behaviorLabels;
 
-    // sample TRANSFER_FRIENDS_REVEALED concordant friends for the transfer alien
-    function sampleFriends(targetBehavior) {
-        var concordant = [], other = [];
-        for (var n = 0; n < 8; n++) {  // graph has 8 nodes
-            (behaviorArr[n] === targetBehavior ? concordant : other).push(n);
-        }
-        concordant = jsPsych.randomization.shuffle(concordant);
-        other      = jsPsych.randomization.shuffle(other);
-        var friends = concordant.slice(0, 4);
-        if (friends.length < 4) friends = friends.concat(other.slice(0, 4 - friends.length));
-        return friends.slice(0, TRANSFER_FRIENDS_REVEALED);
-    }
+    // resolve which behavior int corresponds to each food label for this
+    // participant (behaviorSwap in experiment.js randomizes the assignment)
+    var glorpBehavior = bLabels[0] === 'glorp' ? 0 : 1;
+    var flimBehavior  = 1 - glorpBehavior;
 
-    function groundTruth(novelSpecies, friendNodes) {
-        if (opts.condition === 'homophily') {
-            var counts = [0, 0];
-            friendNodes.forEach(function(n) { counts[behaviorArr[n]]++; });
-            return counts[1] > counts[0] ? 1 : 0;
-        } else {
-            return novelSpecies;
-        }
+    // generate the friend display for one trial. friends are synthetic
+    // (not drawn from the learning graph): we pick a glorp-count uniformly
+    // from {0,1,2,3}, build the corresponding behavior array, and shuffle
+    // the order. friends are rendered featurelessly (color masked) so the
+    // friends cue carries food-distribution information only.
+    function generateFriendBehaviors() {
+        var glorpCount = jsPsych.randomization.sampleWithoutReplacement([0, 1, 2, 3], 1)[0];
+        var behaviors  = [];
+        for (var k = 0; k < glorpCount;             k++) behaviors.push(glorpBehavior);
+        for (var k = 0; k < TRANSFER_FRIENDS_REVEALED - glorpCount; k++) behaviors.push(flimBehavior);
+        return {
+            behaviors:        jsPsych.randomization.shuffle(behaviors),
+            glorpCount:       glorpCount,
+            majorityBehavior: glorpCount > TRANSFER_FRIENDS_REVEALED / 2 ? glorpBehavior : flimBehavior
+        };
     }
 
     var speciesAssignments = jsPsych.randomization.shuffle([0, 1]);
@@ -42,17 +40,21 @@ function buildTransferTrials(opts, jsPsych) {
         var novelDesignStr = String(novelDesignNum).padStart(2, '0');
         var alienColor     = novelSpecies === 0 ? 'green' : 'orange';
         var speciesColor   = novelSpecies === 0 ? 'var(--species-green)' : 'var(--species-orange)';
-        var friendNodes    = sampleFriends(novelSpecies);
-        var gt             = groundTruth(novelSpecies, friendNodes);
         var icon0          = behaviorIcon(0, bLabels);
         var icon1          = behaviorIcon(1, bLabels);
 
-        // build friend cards HTML — friends are rendered with the featureless
-        // alien_00 silhouette so the "friends" cue conveys only food, not species
-        // color (keeps the friends-cue and color-cue fully orthogonal)
-        var friendCardsHtml = friendNodes.map(function(n, fi) {
-            var ficon  = behaviorIcon(behaviorArr[n], bLabels);
-            var flabel = bLabels[behaviorArr[n]];
+        // generate this trial's friend display — 3 featureless friends with a
+        // randomly-sampled glorp-count distribution. friend identity, species,
+        // and graph-membership are not conveyed; only the food labels are.
+        var friendsInfo            = generateFriendBehaviors();
+        var friendBehaviors        = friendsInfo.behaviors;       // length 3, behavior ints
+        var friendGlorpCount       = friendsInfo.glorpCount;      // 0..3
+        var friendMajorityBehavior = friendsInfo.majorityBehavior;
+
+        // build friend cards HTML — featureless silhouettes with food labels
+        var friendCardsHtml = friendBehaviors.map(function(behInt, fi) {
+            var ficon  = behaviorIcon(behInt, bLabels);
+            var flabel = bLabels[behInt];
             return `
                 <div class='friend-card' style='animation-delay:${fi * 80}ms'>
                     <div class='alien-img-wrap'>
@@ -152,20 +154,21 @@ function buildTransferTrials(opts, jsPsych) {
 
                 var trialRecord = {
                     trial_idx:      trialIdx,
-                    novel_agent_name:    novelName,
-                    novel_agent_species: novelSpecies,
-                    friend_count:        TRANSFER_FRIENDS_REVEALED,
-                    friend_nodes_available: friendNodes,
-                    friend_behaviors:    friendNodes.map(function(n) { return behaviorArr[n]; }),
-                    cue_choice:          null,
-                    cue_choice_RT:       null,
-                    revealed_info_summary: null,
-                    behavior_prediction: null,
-                    confidence:          null,
-                    ground_truth_behavior_under_condition: gt,
-                    prediction_correct:  null,
-                    RT_binary:           null,
-                    RT_slider:           null
+                    novel_agent_name:        novelName,
+                    novel_agent_species:     novelSpecies,
+                    novel_design_num:        novelDesignNum,
+                    friend_count:            TRANSFER_FRIENDS_REVEALED,
+                    friend_glorp_count:      friendGlorpCount,           // 0..3
+                    friend_behaviors_shown:  friendBehaviors,            // array, in display order
+                    friend_majority_behavior: friendMajorityBehavior,    // behavior int the majority eats
+                    cue_choice:              null,
+                    cue_choice_RT:           null,
+                    revealed_info_summary:   null,
+                    behavior_prediction:     null,
+                    confidence:              null,
+                    prediction_matches_friend_majority: null,
+                    RT_binary:               null,
+                    RT_slider:               null
                 };
 
                 function show(id) {
@@ -201,7 +204,10 @@ function buildTransferTrials(opts, jsPsych) {
                                 <div style='color:${speciesColor}; font-weight:700; font-size:16px;'>${speciesLabel} alien</div>
                             </div>`;
                     } else {
-                        trialRecord.revealed_info_summary = friendNodes.map(function(n) { return nameMap[n]; }).join(', ');
+                        // summarize the food distribution shown (e.g. "2 glorp, 1 flim")
+                        trialRecord.revealed_info_summary =
+                            friendGlorpCount + ' ' + bLabels[glorpBehavior] + ', ' +
+                            (TRANSFER_FRIENDS_REVEALED - friendGlorpCount) + ' ' + bLabels[flimBehavior];
                         revealEl.innerHTML = `
                             <div class='reveal-label'>This alien's ${TRANSFER_FRIENDS_REVEALED} friends</div>
                             <div class='friends-row'>${friendCardsHtml}</div>`;
@@ -260,11 +266,11 @@ function buildTransferTrials(opts, jsPsych) {
                 // submit
                 document.getElementById('pred-submit').addEventListener('click', function() {
                     var confVal = parseInt(document.getElementById('conf-slider').value);
-                    trialRecord.behavior_prediction = selectedPred;
-                    trialRecord.confidence          = confVal;
-                    trialRecord.prediction_correct  = selectedPred === gt;
-                    trialRecord.RT_binary           = binaryRT;
-                    trialRecord.RT_slider           = sliderRT;
+                    trialRecord.behavior_prediction              = selectedPred;
+                    trialRecord.confidence                       = confVal;
+                    trialRecord.prediction_matches_friend_majority = selectedPred === friendMajorityBehavior;
+                    trialRecord.RT_binary                        = binaryRT;
+                    trialRecord.RT_slider                        = sliderRT;
                     opts.sessionData.phase_3_transfer.trials.push(trialRecord);
                     logToBrowser('transfer trial', trialRecord);
                     jsPsych.finishTrial();
