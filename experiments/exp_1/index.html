@@ -44,7 +44,7 @@
         };
 
         window.onload = async function() {
-            var condition   = Math.random() < 0.5 ? 'homophily' : 'category';
+            var condition   = Math.random() < 0.5 ? 'relational' : 'categorical';
             var graphId    = Math.floor(Math.random() * NUM_GRAPHS) + 1;
             var graphIdStr = String(graphId).padStart(2, '0');
 

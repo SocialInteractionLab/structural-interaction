@@ -130,7 +130,7 @@
       7
     ]
   ],
-  "homophily_condition": {
+  "relational_condition": {
     "group": [
       0,
       1,
@@ -154,7 +154,7 @@
     "rho_EB": 0.5778,
     "rho_CB": 0.0
   },
-  "category_condition": {
+  "categorical_condition": {
     "group": [
       0,
       1,

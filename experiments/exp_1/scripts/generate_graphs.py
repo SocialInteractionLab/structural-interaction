@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 generate_graphs.py — produces NUM_GRAPHS canonical graph JSONs
-two conditions per graph: homophily (E→B) and category (C→B)
+two conditions per graph: relational (E→B) and categorical (C→B)
 outputs to exp_1/stimuli/graphs/
 """
 
@@ -28,11 +28,11 @@ P_IN = 0.58              # within-community edge prob  (tuned for N_EDGES=10, N=
 P_OUT= 0.19              # between-community edge prob (tuned for N_EDGES=10, N=8)
 
 # correlation thresholds
-RHO_EB_MIN   = 0.4     # homophily cond: min ρ(E→B) — edge predicts behavior
-RHO_CB_MIN   = 0.4      # category cond:  min ρ(C→B) — group predicts behavior
+RHO_EB_MIN   = 0.4     # relational cond: min ρ(E→B) — edge predicts behavior
+RHO_CB_MIN   = 0.4      # categorical cond:  min ρ(C→B) — group predicts behavior
 RHO_OTHER_MAX= 0.05      # max |ρ| for the non-signal cue in each condition
                          # 0.05 is the practical floor for N=8, E=10:
-                         #   rho_CB_hom = 0 is achievable (x=2 overlap)
+                         #   rho_CB_rel = 0 is achievable (x=2 overlap)
                          #   min |rho_EB_cat| = 0.044 (k=4 same-beh edges)
 
 # other selection criteria
@@ -82,25 +82,25 @@ def try_make_graph(seed):
     if not nx.is_connected(G):                         return None
     if min(dict(G.degree()).values()) < MIN_DEGREE:    return None
 
-    # homophily condition: behavior = latent, group = random (orthogonal)
-    B_hom      = latent_B.copy()
+    # relational condition: behavior = latent, group = random (orthogonal)
+    B_rel      = latent_B.copy()
     group_pool = np.array([g for g in range(K) for _ in range(N_PER_GROUP)])
-    C_hom      = group_pool.copy()
-    rng.shuffle(C_hom)
+    C_rel      = group_pool.copy()
+    rng.shuffle(C_rel)
 
-    rho_EB_hom = compute_rho_EB(A, B_hom)
-    if rho_EB_hom < RHO_EB_MIN:                       return None
-    rho_CB_hom = compute_rho_CB(C_hom, B_hom)
-    if abs(rho_CB_hom) > RHO_OTHER_MAX:               return None
+    rho_EB_rel = compute_rho_EB(A, B_rel)
+    if rho_EB_rel < RHO_EB_MIN:                       return None
+    rho_CB_rel = compute_rho_CB(C_rel, B_rel)
+    if abs(rho_CB_rel) > RHO_OTHER_MAX:               return None
 
     # group balance check
     deg      = A.sum(axis=1)
     mean_deg = float(deg.mean())
-    if abs(deg[C_hom == 0].mean() - deg[C_hom == 1].mean()) / mean_deg > group_BALANCE_MAX:
+    if abs(deg[C_rel == 0].mean() - deg[C_rel == 1].mean()) / mean_deg > group_BALANCE_MAX:
         return None
 
-    # category condition: group = fresh shuffle, behavior derived from group
-    epsilon = float(np.clip(0.5 - rho_EB_hom, 0.0, 0.5))
+    # categorical condition: group = fresh shuffle, behavior derived from group
+    epsilon = float(np.clip(0.5 - rho_EB_rel, 0.0, 0.5))
     C_cat   = group_pool.copy()
     rng.shuffle(C_cat)
     flips   = rng.random(N) < epsilon
@@ -127,13 +127,13 @@ def try_make_graph(seed):
         "N": N, "M": M, "K": K, "p_in": P_IN, "p_out": P_OUT,
         "adjacency": A.tolist(),
         "edges": edges,
-        "homophily_condition": {
-            "group":  C_hom.tolist(),
-            "behavior": B_hom.tolist(),
-            "rho_EB":   round(rho_EB_hom, 4),
-            "rho_CB":   round(rho_CB_hom, 4)
+        "relational_condition": {
+            "group":  C_rel.tolist(),
+            "behavior": B_rel.tolist(),
+            "rho_EB":   round(rho_EB_rel, 4),
+            "rho_CB":   round(rho_CB_rel, 4)
         },
-        "category_condition": {
+        "categorical_condition": {
             "group":  C_cat.tolist(),
             "behavior": B_cat.tolist(),
             "rho_EB":   round(rho_EB_cat, 4),
@@ -153,7 +153,7 @@ NOTATION_KEY = (
     "Notation\n"
     "  E  =  edge (friendship)\n"
     "  B  =  behavior (food pref)\n"
-    "  C  =  category (group)\n\n"
+    "  C  =  categorical (group)\n\n"
     "  color  =  group (C)\n"
     "    ■  group 0  (green alien)\n"
     "    ■  group 1  (orange alien)\n"
@@ -201,31 +201,31 @@ def draw_graph(ax, A, behavior, group, edge_list, title, info_lines):
 def save_graph_image(g, out_dir):
     A     = np.array(g['adjacency'])
     edges = [(e[0], e[1]) for e in g['edges']]
-    hom   = g['homophily_condition']
-    cat   = g['category_condition']
+    rel   = g['relational_condition']
+    cat   = g['categorical_condition']
     gid   = g['graph_id']
 
     fig, axes = plt.subplots(1, 3, figsize=(16, 5.5),
                              gridspec_kw={'width_ratios': [2, 2, 1]})
     fig.patch.set_facecolor('#fafafa')
 
-    # left: homophily condition — ρ(E→B) always first, ρ(C→B) always second
-    info_hom = [
+    # left: relational condition — ρ(E→B) always first, ρ(C→B) always second
+    info_rel = [
         f"graph {gid:02d}  |  seed={g['seed']}  |  edges={len(edges)}",
-        f"ρ(E→B) = {hom['rho_EB']:+.3f}",
-        f"ρ(C→B) = {hom['rho_CB']:+.3f}",
+        f"ρ(E→B) = {rel['rho_EB']:+.3f}",
+        f"ρ(C→B) = {rel['rho_CB']:+.3f}",
     ]
-    draw_graph(axes[0], A, hom['behavior'], hom['group'],
-               edges, f"graph {gid:02d} — homophily cond", info_hom)
+    draw_graph(axes[0], A, rel['behavior'], rel['group'],
+               edges, f"graph {gid:02d} — relational cond", info_rel)
 
-    # middle: category condition — same order: ρ(E→B) first, ρ(C→B) second
+    # middle: categorical condition — same order: ρ(E→B) first, ρ(C→B) second
     info_cat = [
         f"ε = {g['epsilon']:.3f}",
         f"ρ(E→B) = {cat['rho_EB']:+.3f}",
         f"ρ(C→B) = {cat['rho_CB']:+.3f}",
     ]
     draw_graph(axes[1], A, cat['behavior'], cat['group'],
-               edges, f"graph {gid:02d} — category cond", info_cat)
+               edges, f"graph {gid:02d} — categorical cond", info_cat)
 
     # shared group legend
     grp_legend = [mpatches.Patch(color=GRP_COLORS[i], label=f'group {i}') for i in range(2)]
@@ -262,12 +262,12 @@ if __name__ == '__main__':
                 if g is not None and len(graphs) < NUM_GRAPHS:
                     g["graph_id"] = len(graphs) + 1
                     graphs.append(g)
-                    hom = g["homophily_condition"]
-                    cat = g["category_condition"]
+                    rel = g["relational_condition"]
+                    cat = g["categorical_condition"]
                     print(
                         f"graph {g['graph_id']:02d} | seed={seed+i:5d} | "
                         f"edges={len(g['edges']):2d} | "
-                        f"hom ρ(E→B)={hom['rho_EB']:+.3f} ρ(C→B)={hom['rho_CB']:+.3f} | "
+                        f"rel ρ(E→B)={rel['rho_EB']:+.3f} ρ(C→B)={rel['rho_CB']:+.3f} | "
                         f"cat ρ(C→B)={cat['rho_CB']:+.3f} ρ(E→B)={cat['rho_EB']:+.3f} | "
                         f"ε={g['epsilon']:.3f}"
                     )

@@ -141,9 +141,9 @@ function initStudy(graphData, condition) {
     });
 
     // ── participant-level randomization ───────────────────────────
-    var condData = condition === 'homophily'
-        ? graphData.homophily_condition
-        : graphData.category_condition;
+    var condData = condition === 'relational'
+        ? graphData.relational_condition
+        : graphData.categorical_condition;
     var species  = condData.group;
     var behavior = condData.behavior;
     var edges    = graphData.edges;
