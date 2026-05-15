@@ -178,6 +178,30 @@
     "rho_EB": -0.0444,
     "rho_CB": 0.5
   },
+  "exemplar_condition": {
+    "group": [
+      0,
+      0,
+      1,
+      1,
+      0,
+      0,
+      1,
+      1
+    ],
+    "behavior": [
+      0,
+      0,
+      1,
+      1,
+      1,
+      1,
+      0,
+      0
+    ],
+    "rho_EB": -0.0444,
+    "rho_CB": 0.0
+  },
   "epsilon": 0.0,
   "edge_recognition_trials": [
     {

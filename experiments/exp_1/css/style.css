@@ -702,6 +702,28 @@ input[type=range].slider::-moz-range-thumb {
 }
 .check-circle svg { width: 32px; height: 32px; }
 
+/* ── Block test ────────────────────────────────────────────── */
+.block-test-header { text-align: center; margin-bottom: 6px; }
+.block-test-prompt {
+  font-size: 18px; text-align: center; margin: 14px 0 18px; color: var(--ink);
+}
+.block-test-choices {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 14px;
+  max-width: 440px; margin: 20px auto 0;
+}
+.block-test-feedback {
+  text-align: center; margin-top: 18px;
+  font-size: 16px; font-weight: 600; min-height: 26px;
+}
+.feedback-correct   { color: var(--good); }
+.feedback-incorrect { color: var(--bad); }
+
+/* ── Transfer grey note ────────────────────────────────────── */
+.novel-grey-note {
+  font-size: 13px; color: var(--ink-3);
+  text-align: center; margin-top: 6px;
+}
+
 /* ── Dev toolbar (fixed at very top in testing mode) ──────── */
 #dev-toolbar {
   position: fixed;

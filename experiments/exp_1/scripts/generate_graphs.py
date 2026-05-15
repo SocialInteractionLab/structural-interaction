@@ -112,6 +112,19 @@ def try_make_graph(seed):
     rho_EB_cat = compute_rho_EB(A, B_cat)
     if abs(rho_EB_cat) > RHO_OTHER_MAX:               return None
 
+    # exemplar condition: behavior random, uncorrelated w/ both E and C
+    b_pool_ex = np.array([b for b in range(M) for _ in range(N_PER_BEH)])
+    B_ex, C_ex = None, None
+    for _ in range(500):
+        b_try = b_pool_ex.copy(); rng.shuffle(b_try)
+        c_try = group_pool.copy(); rng.shuffle(c_try)
+        rho_EB_ex = compute_rho_EB(A, b_try)
+        rho_CB_ex = compute_rho_CB(c_try, b_try)
+        if abs(rho_EB_ex) <= RHO_OTHER_MAX and abs(rho_CB_ex) <= RHO_OTHER_MAX:
+            B_ex, C_ex = b_try, c_try
+            break
+    if B_ex is None:                                   return None
+
     edges     = [[int(i), int(j)] for i in range(N) for j in range(i+1, N) if A[i, j] == 1]
     non_edges = [[int(i), int(j)] for i in range(N) for j in range(i+1, N) if A[i, j] == 0]
     rng2      = np.random.default_rng(seed + 99999)
@@ -138,6 +151,12 @@ def try_make_graph(seed):
             "behavior": B_cat.tolist(),
             "rho_EB":   round(rho_EB_cat, 4),
             "rho_CB":   round(rho_CB_cat, 4)
+        },
+        "exemplar_condition": {
+            "group":  C_ex.tolist(),
+            "behavior": B_ex.tolist(),
+            "rho_EB":   round(compute_rho_EB(A, B_ex), 4),
+            "rho_CB":   round(compute_rho_CB(C_ex, B_ex), 4)
         },
         "epsilon": round(epsilon, 4),
         "edge_recognition_trials": er_trials
@@ -203,13 +222,14 @@ def save_graph_image(g, out_dir):
     edges = [(e[0], e[1]) for e in g['edges']]
     rel   = g['relational_condition']
     cat   = g['categorical_condition']
+    ex    = g['exemplar_condition']
     gid   = g['graph_id']
 
-    fig, axes = plt.subplots(1, 3, figsize=(16, 5.5),
-                             gridspec_kw={'width_ratios': [2, 2, 1]})
+    fig, axes = plt.subplots(1, 4, figsize=(21, 5.5),
+                             gridspec_kw={'width_ratios': [2, 2, 2, 1]})
     fig.patch.set_facecolor('#fafafa')
 
-    # left: relational condition — ρ(E→B) always first, ρ(C→B) always second
+    # panel 0: relational condition
     info_rel = [
         f"graph {gid:02d}  |  seed={g['seed']}  |  edges={len(edges)}",
         f"ρ(E→B) = {rel['rho_EB']:+.3f}",
@@ -218,7 +238,7 @@ def save_graph_image(g, out_dir):
     draw_graph(axes[0], A, rel['behavior'], rel['group'],
                edges, f"graph {gid:02d} — relational cond", info_rel)
 
-    # middle: categorical condition — same order: ρ(E→B) first, ρ(C→B) second
+    # panel 1: categorical condition
     info_cat = [
         f"ε = {g['epsilon']:.3f}",
         f"ρ(E→B) = {cat['rho_EB']:+.3f}",
@@ -227,14 +247,22 @@ def save_graph_image(g, out_dir):
     draw_graph(axes[1], A, cat['behavior'], cat['group'],
                edges, f"graph {gid:02d} — categorical cond", info_cat)
 
+    # panel 2: exemplar condition
+    info_ex = [
+        f"ρ(E→B) = {ex['rho_EB']:+.3f}",
+        f"ρ(C→B) = {ex['rho_CB']:+.3f}",
+    ]
+    draw_graph(axes[2], A, ex['behavior'], ex['group'],
+               edges, f"graph {gid:02d} — exemplar cond", info_ex)
+
     # shared group legend
     grp_legend = [mpatches.Patch(color=GRP_COLORS[i], label=f'group {i}') for i in range(2)]
-    axes[0].legend(handles=grp_legend, loc='upper right', fontsize=8, framealpha=0.85)
-    axes[1].legend(handles=grp_legend, loc='upper right', fontsize=8, framealpha=0.85)
+    for ax in axes[:3]:
+        ax.legend(handles=grp_legend, loc='upper right', fontsize=8, framealpha=0.85)
 
-    # right: notation key
-    axes[2].axis('off')
-    axes[2].text(0.05, 0.95, NOTATION_KEY, transform=axes[2].transAxes,
+    # panel 3: notation key
+    axes[3].axis('off')
+    axes[3].text(0.05, 0.95, NOTATION_KEY, transform=axes[3].transAxes,
                  fontsize=9, verticalalignment='top', family='monospace',
                  color='#333', bbox=dict(boxstyle='round,pad=0.6', fc='#f0f0f0', ec='#bbb'))
 
@@ -264,11 +292,13 @@ if __name__ == '__main__':
                     graphs.append(g)
                     rel = g["relational_condition"]
                     cat = g["categorical_condition"]
+                    ex  = g["exemplar_condition"]
                     print(
                         f"graph {g['graph_id']:02d} | seed={seed+i:5d} | "
                         f"edges={len(g['edges']):2d} | "
                         f"rel ρ(E→B)={rel['rho_EB']:+.3f} ρ(C→B)={rel['rho_CB']:+.3f} | "
                         f"cat ρ(C→B)={cat['rho_CB']:+.3f} ρ(E→B)={cat['rho_EB']:+.3f} | "
+                        f"ex ρ(E→B)={ex['rho_EB']:+.3f} ρ(C→B)={ex['rho_CB']:+.3f} | "
                         f"ε={g['epsilon']:.3f}"
                     )
             seed += BATCH

@@ -143,7 +143,9 @@ function initStudy(graphData, condition) {
     // ── participant-level randomization ───────────────────────────
     var condData = condition === 'relational'
         ? graphData.relational_condition
-        : graphData.categorical_condition;
+        : condition === 'categorical'
+            ? graphData.categorical_condition
+            : graphData.exemplar_condition;
     var species  = condData.group;
     var behavior = condData.behavior;
     var edges    = graphData.edges;
@@ -194,8 +196,8 @@ function initStudy(graphData, condition) {
             species_label_mapping:  { 0: 'green alien', 1: 'orange alien' },
             behavior_label_mapping: behaviorLabels
         },
-        phase_1_learning: { trials: [], attention_check_hit_rate: 0 },
-        phase_2_validation: { edge_recognition: [], species_recall: [], behavior_recall: [] },
+        phase_1_learning: { trials: [], block_tests: [], early_exit_run: null, early_exit_accuracy: null, attention_check_hit_rate: 0 },
+        phase_2_validation: { edge_recognition: [], species_recall: [] },
         phase_3_transfer:   { trials: [] },
         phase_4_strategy:   { free_text: '', time_on_screen_ms: 0 },
         phase_5_demographics: {},
@@ -203,8 +205,7 @@ function initStudy(graphData, condition) {
             failed_comprehension_retries:       0,
             upside_down_hit_rate:               0,
             below_threshold_edge_recognition:   false,
-            below_threshold_species:            false,
-            below_threshold_behavior:           false
+            below_threshold_species:            false
         }
     };
     jsPsych.data.addProperties({ sessionData });
@@ -607,7 +608,16 @@ function initStudy(graphData, condition) {
             <div class='page-inner'>
                 <div class='card card-narrow' style='text-align:center;'>
                     <h1 style='font-size:26px;'>You're all set!</h1>
-                    <p class='muted'>Click below when you're ready to start the experiment.</p>
+                    <p class='muted'>Click below when you're ready to start.</p>
+                    <div style='background:var(--bg-2); border:1px solid var(--line);
+                        border-radius:var(--radius); padding:16px 22px; margin:20px 0 0; text-align:left;'>
+                        <p class='muted' style='margin:0; font-size:14.5px; line-height:1.6;'>
+                            <strong>How this works:</strong> After each round, you'll get a quick
+                            one-question check on a pair you just saw. If you score ${Math.round(BLOCK_TEST_ACCURACY_THRESHOLD * 100)}%
+                            or higher across at least ${BLOCK_TEST_MIN_RUNS} rounds, you'll move on early.
+                            Otherwise you'll complete all ${LEARNING_RUNS} rounds.
+                        </p>
+                    </div>
                     <div class='btn-row' style='margin-top:20px;'>
                         <button class='btn btn-lg' id='ready-btn'>Start experiment</button>
                     </div>
@@ -622,60 +632,98 @@ function initStudy(graphData, condition) {
         }
     };
 
-    // pre-build all learning trials
+    // pre-build all learning trials + per-run block tests
+    // each run is a conditional timeline node — skipped if _earlyExit.triggered
     var sessionTrialIdx = 0;
-    var learningBlock = [];
+    var _earlyExit      = { triggered: false };
+    var _cumEdges       = [];   // grows with each run; snapshot passed to block test
+    var learningBlock   = [];
 
     for (var run = 0; run < LEARNING_RUNS; run++) {
-        var runEdges = jsPsych.randomization.shuffle([...edges]);
-        runEdges.forEach(function(edge) {
-            var isUD = Math.random() < UPSIDE_DOWN_RATE;
-            var udNode = isUD ? edge[Math.floor(Math.random() * 2)] : null;
+        (function(r) {
+            var runEdges = jsPsych.randomization.shuffle([...edges]);
+            _cumEdges = _cumEdges.concat(runEdges);
+            var edgesSnap = _cumEdges.slice();  // snapshot for this block test
 
-            learningBlock.push(buildLearningTrial({
-                edge, run,
-                sessionTrialIdx: sessionTrialIdx++,
-                isUpsideDown: isUD,
-                upsideDownNode: udNode,
-                species, behavior, nameMapping, behaviorLabels, sessionData
+            var runContent = [];
+
+            runEdges.forEach(function(edge) {
+                var isUD   = Math.random() < UPSIDE_DOWN_RATE;
+                var udNode = isUD ? edge[Math.floor(Math.random() * 2)] : null;
+                var trial  = buildLearningTrial({
+                    edge, run: r,
+                    sessionTrialIdx: sessionTrialIdx++,
+                    isUpsideDown: isUD, upsideDownNode: udNode,
+                    species, behavior, nameMapping, behaviorLabels, sessionData
+                }, jsPsych);
+                var _origFin = trial.on_finish;
+                trial.on_finish = function(data) { advanceProgress(); if (_origFin) _origFin(data); };
+                runContent.push(trial);
+            });
+
+            // block test — cumulative edges up to and including this run
+            runContent.push(buildBlockTest({
+                run: r, cumulativeEdges: edgesSnap,
+                species, behavior, nameMapping, behaviorLabels, sessionData,
+                earlyExit: _earlyExit,
+                minRuns: BLOCK_TEST_MIN_RUNS,
+                threshold: BLOCK_TEST_ACCURACY_THRESHOLD
             }, jsPsych));
-        });
-        if (run < LEARNING_RUNS - 1) {
-            (function(r) {
-                learningBlock.push(buildRunBreak(r + 1, LEARNING_RUNS, jsPsych, function() {
-                    setPhase('learning', {
-                        total: LEARNING_RUNS,
-                        activeIdx: r + 1,
-                        label: 'Run ' + (r + 2) + ' of ' + LEARNING_RUNS
-                    });
-                }));
-            })(run);
-        }
+
+            // wrap entire run in conditional so it's skipped if early exit triggered
+            learningBlock.push({
+                timeline: runContent,
+                conditional_function: function() { return !_earlyExit.triggered; }
+            });
+
+            // run break is a separate conditional node so it's also skipped on early exit
+            if (r < LEARNING_RUNS - 1) {
+                learningBlock.push({
+                    timeline: [buildRunBreak(r + 1, LEARNING_RUNS, jsPsych, function() {
+                        setPhase('learning', {
+                            total: LEARNING_RUNS,
+                            activeIdx: r + 1,
+                            label: 'Run ' + (r + 2) + ' of ' + LEARNING_RUNS
+                        });
+                    })],
+                    conditional_function: function() { return !_earlyExit.triggered; }
+                });
+            }
+        })(run);
     }
 
     var phase1Done = {
         type: jsPsychHtmlButtonResponse,
-        stimulus: `
-            <div class='page-inner'>
-                <div class='card card-narrow' style='text-align:center;'>
-                    <h1 style='font-size:26px;'>Learning phase complete.</h1>
-                    <p class='muted'>Next: a short memory check.</p>
-                    <div class='btn-row' style='margin-top:20px;'>
-                        <button class='btn' id='p1done-btn'>Continue</button>
-                    </div>
-                </div>
-            </div>`,
+        stimulus: '',
         choices: [],
         response_ends_trial: false,
         on_load: function() {
             setPhase('memory');
             var p1trials = sessionData.phase_1_learning.trials;
             var udTrials = p1trials.filter(function(t) { return t.upside_down; });
-            var hits = udTrials.filter(function(t) { return t.attention_response === 'space'; });
-            var hitRate = udTrials.length > 0 ? hits.length / udTrials.length : 1;
+            var hits     = udTrials.filter(function(t) { return t.attention_response === 'space'; });
+            var hitRate  = udTrials.length > 0 ? hits.length / udTrials.length : 1;
             sessionData.phase_1_learning.attention_check_hit_rate = Math.round(hitRate * 100) / 100;
             sessionData.attention_flags.upside_down_hit_rate = hitRate;
             logToBrowser('attention hit rate', hitRate);
+
+            var tests    = sessionData.phase_1_learning.block_tests;
+            var nCorrect = tests.filter(function(t) { return t.correct; }).length;
+            var subMsg   = _earlyExit.triggered
+                ? 'You scored ' + nCorrect + '/' + tests.length + ' on the quick checks. Next: a short memory check.'
+                : 'Next: a short memory check.';
+
+            var container = document.querySelector('.jspsych-html-button-response-stimulus') || document.querySelector('#jspsych-content');
+            container.innerHTML = `
+                <div class='page-inner'>
+                    <div class='card card-narrow' style='text-align:center;'>
+                        <h1 style='font-size:26px;'>Learning phase complete.</h1>
+                        <p class='muted'>${subMsg}</p>
+                        <div class='btn-row' style='margin-top:20px;'>
+                            <button class='btn' id='p1done-btn'>Continue</button>
+                        </div>
+                    </div>
+                </div>`;
             document.getElementById('p1done-btn').addEventListener('click', function() {
                 jsPsych.finishTrial();
             });
@@ -693,9 +741,9 @@ function initStudy(graphData, condition) {
                 <div class='card card-narrow'>
                     <div class='eyebrow swing-in d-1'>Memory check</div>
                     <h1 class='swing-in d-2'>Now we'll see what you remember.</h1>
-                    <p class='lead swing-in d-3' style='color:var(--ink-2);'>You'll answer three short sets of questions:</p>
+                    <p class='lead swing-in d-3' style='color:var(--ink-2);'>You'll answer two short sets of questions:</p>
                     <div style='display:flex; flex-direction:column; gap:12px; margin:20px 0 4px;'>
-                        ${[['01','Which aliens were friends?'],['02','Is each alien green or orange?'],['03','What does each alien eat?']].map(function(item) {
+                        ${[['01','Which aliens were friends?'],['02','Is each alien green or orange?']].map(function(item) {
                             return `<div style='display:flex; align-items:center; gap:16px; padding:14px 18px;
                                 background:var(--bg-2); border-radius:var(--radius); border:1px solid var(--line);'>
                                 <span style='font-family:var(--font-mono,monospace); font-size:12px;
@@ -737,7 +785,6 @@ function initStudy(graphData, condition) {
         graphData.edge_recognition_trials, nameMapping, species, jsPsych, sessionData
     );
     var speciesRecallTrials = buildSpeciesRecallTrials(species, nameMapping, jsPsych, sessionData);
-    var behaviorRecallTrials = buildBehaviorRecallTrials(behavior, nameMapping, behaviorLabels, species, jsPsych, sessionData);
 
 
     // ══════════════════════════════════════════════════════════════
@@ -936,7 +983,8 @@ function initStudy(graphData, condition) {
     };
 
     // ── progress bar (updates frame-top fill) ─────────────────────
-    var totalTrials = 325;
+    // tracked: 100 learning trials + 13 validation trials (edge 5 + species 8)
+    var totalTrials = 115;
     var trialCount  = 0;
 
     function advanceProgress() {
@@ -946,11 +994,8 @@ function initStudy(graphData, condition) {
         if (fill) fill.style.width = (pct * 100) + '%';
     }
 
-    learningBlock.forEach(function(t) {
-        var orig = t.on_finish;
-        t.on_finish = function(data) { advanceProgress(); if (orig) orig(data); };
-    });
-    [...edgeRecTrials, ...speciesRecallTrials, ...behaviorRecallTrials].forEach(function(t) {
+    // learning trials have on_finish attached inside the IIFE above
+    [...edgeRecTrials, ...speciesRecallTrials].forEach(function(t) {
         var orig = t.on_finish;
         t.on_finish = function(data) { advanceProgress(); if (orig) orig(data); };
     });
@@ -974,18 +1019,17 @@ function initStudy(graphData, condition) {
             timeline: (function() {
                 var blocks = jsPsych.randomization.shuffle([
                     [].concat(edgeRecTrials),
-                    [].concat(speciesRecallTrials),
-                    [].concat(behaviorRecallTrials)
+                    [].concat(speciesRecallTrials)
                 ]);
                 blocks.forEach(function(block, i) {
                     var orig = block[0].on_load;
                     block[0].on_load = function() {
-                        setPhase('memory', { total: 3, activeIdx: i, label: 'Section ' + (i + 1) + ' of 3' });
+                        setPhase('memory', { total: 2, activeIdx: i, label: 'Section ' + (i + 1) + ' of 2' });
                         if (orig) orig();
                     };
                 });
                 return [phase2Instructions]
-                    .concat(blocks[0]).concat(blocks[1]).concat(blocks[2]);
+                    .concat(blocks[0]).concat(blocks[1]);
             })(),
             conditional_function: function() { return _devStart <= 3; }
         },

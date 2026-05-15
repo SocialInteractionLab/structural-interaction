@@ -14,6 +14,10 @@ const PROLIFIC_COMPLETION_URL = 'https://app.prolific.com/submissions/complete?c
 // graph set — bump NUM_GRAPHS + re-run generate_graphs.py to add more
 const NUM_GRAPHS = 5;
 
+// block test (end-of-run check)
+const BLOCK_TEST_MIN_RUNS           = 5;     // earliest run where early-exit can trigger
+const BLOCK_TEST_ACCURACY_THRESHOLD = 0.80;  // cumulative correct rate to advance early
+
 // timing (ms)
 const LEARNING_ONSET_MS  = 2400;  // pair visible before behavior reveal
 const LEARNING_REVEAL_MS = 3100;  // behavior visible before next trial (total 5500ms)

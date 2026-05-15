@@ -36,9 +36,9 @@ function buildTransferTrials(opts, jsPsych) {
         var speciesLabel   = novelSpecies === 0 ? 'green' : 'orange';
         // design number for this transfer alien — drawn from the 2 designs held
         // out from learning (passed in as opts.transferDesignNums)
-        var novelDesignNum = opts.transferDesignNums[trialIdx];
-        var novelDesignStr = String(novelDesignNum).padStart(2, '0');
+        var novelDesignNum = opts.transferDesignNums[trialIdx];  // logged for reference
         var alienColor     = novelSpecies === 0 ? 'green' : 'orange';
+        // always use alien_00 for transfer — greyscale applied via .novel-alien.unknown
         var speciesColor   = novelSpecies === 0 ? 'var(--species-green)' : 'var(--species-orange)';
         var icon0          = behaviorIcon(0, bLabels);
         var icon1          = behaviorIcon(1, bLabels);
@@ -74,9 +74,10 @@ function buildTransferTrials(opts, jsPsych) {
                     <div class='transfer-section' id='ts-cue'>
                         <div class='novel-alien unknown'>
                             <div class='alien-img-wrap'>
-                                <img src='stimuli/aliens/alien_${novelDesignStr}_green.png' class='alien-img' alt=''>
+                                <img src='stimuli/aliens/alien_00_green.png' class='alien-img' alt=''>
                             </div>
-                            <div class='novel-tag'>a new alien &nbsp;·&nbsp; ${trialIdx + 1} of ${TRANSFER_NAMES.length}</div>
+                            <div class='novel-tag'>new alien &nbsp;·&nbsp; ${trialIdx + 1} of ${TRANSFER_NAMES.length}</div>
+                            <div class='novel-grey-note'>This alien's color is hidden. Choose a clue below to learn more.</div>
                         </div>
                         <p class='transfer-q'>What do you think this alien eats?</p>
                         <p class='transfer-sub'>
@@ -199,7 +200,7 @@ function buildTransferTrials(opts, jsPsych) {
                             <div class='reveal-label'>This alien's color</div>
                             <div style='display:flex; flex-direction:column; align-items:center; gap:10px;'>
                                 <div class='alien-img-wrap' style='width:160px; height:160px;'>
-                                    <img src='stimuli/aliens/alien_${novelDesignStr}_${alienColor}.png' class='alien-img' alt=''>
+                                    <img src='stimuli/aliens/alien_00_${alienColor}.png' class='alien-img' alt=''>
                                 </div>
                                 <div style='color:${speciesColor}; font-weight:700; font-size:16px;'>${speciesLabel} alien</div>
                             </div>`;
