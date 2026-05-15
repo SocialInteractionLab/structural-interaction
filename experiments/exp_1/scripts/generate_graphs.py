@@ -177,8 +177,8 @@ NOTATION_KEY = (
     "    ■  group 0  (green alien)\n"
     "    ■  group 1  (orange alien)\n"
     "  shape  =  behavior (B)\n"
-    "    ●  behavior 0\n"
-    "    ■  behavior 1\n\n"
+    "    ●  behavior 0  (glorp or flim)\n"
+    "    ■  behavior 1  (the other food)\n\n"
     "  ρ(E→B)  =  P(same B | friends)\n"
     "            − P(same B | not friends)\n\n"
     "  ρ(C→B)  =  P(C matches B) − 0.5"
@@ -247,18 +247,19 @@ def save_graph_image(g, out_dir):
     draw_graph(axes[1], A, cat['behavior'], cat['group'],
                edges, f"graph {gid:02d} — categorical cond", info_cat)
 
-    # panel 2: exemplar condition
+    # panel 2: exemplar condition (blank first line keeps text box same height as others)
     info_ex = [
+        f"",
         f"ρ(E→B) = {ex['rho_EB']:+.3f}",
         f"ρ(C→B) = {ex['rho_CB']:+.3f}",
     ]
     draw_graph(axes[2], A, ex['behavior'], ex['group'],
                edges, f"graph {gid:02d} — exemplar cond", info_ex)
 
-    # shared group legend
+    # group legend — upper left, no hardcoded position
     grp_legend = [mpatches.Patch(color=GRP_COLORS[i], label=f'group {i}') for i in range(2)]
     for ax in axes[:3]:
-        ax.legend(handles=grp_legend, loc='upper right', fontsize=8, framealpha=0.85)
+        ax.legend(handles=grp_legend, loc='upper left', fontsize=8, framealpha=0.85)
 
     # panel 3: notation key
     axes[3].axis('off')

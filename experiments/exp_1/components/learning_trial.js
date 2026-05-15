@@ -122,41 +122,26 @@ function buildBlockTest(opts, jsPsych) {
     var html = `
         <div class='learn-stage prevent-select'>
             <div class='learn-frame'>
-                <div class='block-test-header'>
-                    <span class='meta'>Quick check &nbsp;·&nbsp; after round ${opts.run + 1}</span>
-                </div>
-                <p class='block-test-prompt'>Their friend eats <strong>${friendLabel}</strong>. What does this alien eat?</p>
+                <p class='block-test-prompt' id='btest-narrative'>Here's an alien you saw this round.</p>
                 <div class='pair'>
                     <div class='alien-slot'>
                         <div class='alien-img-wrap'>
                             <img src='${targetImg}' class='alien-img' alt=''>
                         </div>
-                        <div class='behavior' id='btest-target-beh'>
-                            <div class='behavior-plate'>
-                                <span class='behavior-name' style='opacity:0.4; font-size:22px;'>?</span>
-                            </div>
-                        </div>
+                        <div id='btest-target-area'></div>
                     </div>
-                    <div class='bond'><div class='bond-line'></div></div>
-                    <div class='alien-slot'>
+                    <div class='bond' id='btest-bond' style='opacity:0; transition:opacity 500ms;'><div class='bond-line'></div></div>
+                    <div class='alien-slot' id='btest-friend-slot' style='opacity:0; transition:opacity 500ms;'>
                         <div class='alien-img-wrap'>
                             <img src='${friendImg}' class='alien-img' alt=''>
                         </div>
-                        <div class='behavior revealed'>
+                        <div class='behavior' id='btest-friend-beh'>
                             <div class='behavior-plate'>
                                 <img src='${friendIcon}' class='behavior-icon' alt='${friendLabel}'>
                                 <span class='behavior-name'>${friendLabel}</span>
                             </div>
                         </div>
                     </div>
-                </div>
-                <div class='block-test-choices'>
-                    <button class='predict-btn' id='btest-btn-0'>
-                        <img src='${icon0}' alt=''>${label0}
-                    </button>
-                    <button class='predict-btn' id='btest-btn-1'>
-                        <img src='${icon1}' alt=''>${label1}
-                    </button>
                 </div>
                 <div class='block-test-feedback' id='btest-feedback' style='display:none;'></div>
             </div>
@@ -168,11 +153,43 @@ function buildBlockTest(opts, jsPsych) {
         choices: [],
         response_ends_trial: false,
         on_load: function() {
-            var trialStart = performance.now();
+            var trialStart = null;
             var responded  = false;
 
+            // stage 1 → 2: friend appears
+            setTimeout(function() {
+                document.getElementById('btest-bond').style.opacity        = '1';
+                document.getElementById('btest-friend-slot').style.opacity = '1';
+                document.getElementById('btest-narrative').textContent     = 'This is their friend.';
+            }, 2000);
+
+            // stage 2 → 3: friend's food revealed
+            setTimeout(function() {
+                document.getElementById('btest-friend-beh').classList.add('revealed');
+                document.getElementById('btest-narrative').innerHTML =
+                    'Their friend eats <strong>' + friendLabel + '</strong>.';
+            }, 4000);
+
+            // stage 3 → 4: question + choices injected, RT clock starts
+            setTimeout(function() {
+                document.getElementById('btest-narrative').textContent = 'What do you think this alien likes to eat?';
+                var area = document.getElementById('btest-target-area');
+                area.innerHTML = `
+                    <div class='block-test-choices'>
+                        <button class='predict-btn' id='btest-btn-0'>
+                            <img src='${icon0}' alt=''>${label0}
+                        </button>
+                        <button class='predict-btn' id='btest-btn-1'>
+                            <img src='${icon1}' alt=''>${label1}
+                        </button>
+                    </div>`;
+                document.getElementById('btest-btn-0').addEventListener('click', function() { respond(0); });
+                document.getElementById('btest-btn-1').addEventListener('click', function() { respond(1); });
+                trialStart = performance.now();
+            }, 6000);
+
             function respond(respInt) {
-                if (responded) return;
+                if (responded || !trialStart) return;
                 responded = true;
                 var correct = (respInt === targetBeh);
                 var RT = Math.round(performance.now() - trialStart);
@@ -195,20 +212,16 @@ function buildBlockTest(opts, jsPsych) {
                     opts.sessionData.phase_1_learning.early_exit_accuracy = Math.round(accuracy * 100) / 100;
                 }
 
-                // disable buttons, mark selection
-                document.getElementById('btest-btn-0').disabled = true;
-                document.getElementById('btest-btn-1').disabled = true;
-                document.getElementById('btest-btn-' + respInt).classList.add('selected');
-
-                // reveal target food
+                // replace choices with revealed food plate
                 var correctIcon  = behaviorIcon(targetBeh, opts.behaviorLabels);
                 var correctLabel = opts.behaviorLabels[targetBeh];
-                var targetBehEl  = document.getElementById('btest-target-beh');
-                targetBehEl.classList.add('revealed');
-                targetBehEl.innerHTML = `
-                    <div class='behavior-plate'>
-                        <img src='${correctIcon}' class='behavior-icon' alt='${correctLabel}'>
-                        <span class='behavior-name'>${correctLabel}</span>
+                var area = document.getElementById('btest-target-area');
+                area.innerHTML = `
+                    <div class='behavior revealed'>
+                        <div class='behavior-plate'>
+                            <img src='${correctIcon}' class='behavior-icon' alt='${correctLabel}'>
+                            <span class='behavior-name'>${correctLabel}</span>
+                        </div>
                     </div>`;
 
                 // feedback
@@ -220,9 +233,6 @@ function buildBlockTest(opts, jsPsych) {
 
                 setTimeout(function() { jsPsych.finishTrial(); }, 1600);
             }
-
-            document.getElementById('btest-btn-0').addEventListener('click', function() { respond(0); });
-            document.getElementById('btest-btn-1').addEventListener('click', function() { respond(1); });
         }
     };
 }

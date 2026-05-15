@@ -112,7 +112,7 @@ function buildTransferTrials(opts, jsPsych) {
 
                     <!-- section 3: prediction (hidden until continue) -->
                     <div class='transfer-section appearing' id='ts-predict' style='display:none;'>
-                        <p class='transfer-q'>So… what does this alien eat?</p>
+                        <p class='transfer-q'>What do you think this new alien likes to eat?</p>
                         <div class='predict-row'>
                             <button class='predict-btn' id='pred-0'>
                                 <img src='${icon0}' alt=''>${bLabels[0]}
@@ -127,7 +127,6 @@ function buildTransferTrials(opts, jsPsych) {
                     <div class='transfer-section appearing' id='ts-confidence' style='display:none;'>
                         <div class='slider-block'>
                             <p class='transfer-q' style='font-size:22px;'>How confident are you?</p>
-                            <div class='slider-value' id='conf-val'>?</div>
                             <input type='range' class='slider' id='conf-slider' min='0' max='100' step='1' value='50'>
                             <div class='slider-row'>
                                 <span>Not at all</span>
@@ -245,14 +244,12 @@ function buildTransferTrials(opts, jsPsych) {
                     slider.addEventListener('input', function() {
                         updateSliderGradient(slider, 'var(--accent)');
                         if (sliderTouched) {
-                            document.getElementById('conf-val').textContent = slider.value;
                         }
                     });
                     function touchSlider() {
                         if (!sliderTouched) {
                             sliderTouched = true;
                             sliderRT = Math.round(performance.now() - stageStart);
-                            document.getElementById('conf-val').textContent = slider.value;
                             document.getElementById('pred-submit').disabled = false;
                         }
                     }

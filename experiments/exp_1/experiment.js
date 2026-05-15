@@ -231,8 +231,7 @@ function initStudy(graphData, condition) {
                 <div class='card card-narrow' style='position:relative;'>
                     <div class='eyebrow'>Welcome!</div>
                     <p class='lead' style='color:var(--ink-2); margin-top:14px;'>
-                        In today's study, you'll meet a small group of aliens and learn about their friendships,
-                        species, and eating habits. The whole study takes about <strong>10 minutes</strong>.
+                        In today's study, you'll meet and learn about a small group of aliens. The whole study takes about <strong>CHANGE THIS</strong>.
                     </p>
                     <hr>
                     <p class='muted'>
@@ -462,7 +461,7 @@ function initStudy(graphData, condition) {
                     <div class='eyebrow swing-in d-1'>Quick check</div>
                     <h1 class='swing-in d-2' style='font-size:28px;'>A few quick questions before we start</h1>
 
-                    <div class='q-block'>
+                    <div class='q-block swing-in d-3'>
                         <div class='q-label'>1. When two aliens appear together on screen, that means…</div>
                         <div class='choice-list' id='q1-list'>
                             <div class='choice' data-q='q1' data-v='friends'><div class='choice-radio'></div><div class='choice-text'>They are friends</div></div>
@@ -471,27 +470,40 @@ function initStudy(graphData, condition) {
                         </div>
                     </div>
 
-                    <div class='q-block'>
-                        <div class='q-label'>2. Which of the following is <em>not</em> a food the aliens eat?</div>
-                        <div class='choice-list' id='q2-list'>
-                            <div class='choice' data-q='q2' data-v='Bubba'><div class='choice-radio'></div><div class='choice-text'>Bubba</div></div>
-                            <div class='choice' data-q='q2' data-v='Glorp'><div class='choice-radio'></div><div class='choice-text'>Glorp</div></div>
-                            <div class='choice' data-q='q2' data-v='Flim'><div class='choice-radio'></div><div class='choice-text'>Flim</div></div>
+                    <div class='comp-q-wrap' id='q2-wrap'>
+                        <div class='comp-q-inner'>
+                            <div class='q-block' id='q2-block'>
+                                <div class='q-label'>2. Which of the following is <em>not</em> a food the aliens eat?</div>
+                                <div class='choice-list' id='q2-list'>
+                                    <div class='choice' data-q='q2' data-v='Bubba'><div class='choice-radio'></div><div class='choice-text'>Bubba</div></div>
+                                    <div class='choice' data-q='q2' data-v='Glorp'><div class='choice-radio'></div><div class='choice-text'>Glorp</div></div>
+                                    <div class='choice' data-q='q2' data-v='Flim'><div class='choice-radio'></div><div class='choice-text'>Flim</div></div>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
-                    <div class='q-block' style='margin-bottom:8px;'>
-                        <div class='q-label'>3. How many aliens will you learn about?</div>
-                        <div class='choice-list' id='q3-list'>
-                            <div class='choice' data-q='q3' data-v='4'><div class='choice-radio'></div><div class='choice-text'>4</div></div>
-                            <div class='choice' data-q='q3' data-v='8'><div class='choice-radio'></div><div class='choice-text'>8</div></div>
-                            <div class='choice' data-q='q3' data-v='20'><div class='choice-radio'></div><div class='choice-text'>20</div></div>
+                    <div class='comp-q-wrap' id='q3-wrap'>
+                        <div class='comp-q-inner'>
+                            <div class='q-block' id='q3-block' style='margin-bottom:8px;'>
+                                <div class='q-label'>3. How many aliens will you learn about?</div>
+                                <div class='choice-list' id='q3-list'>
+                                    <div class='choice' data-q='q3' data-v='4'><div class='choice-radio'></div><div class='choice-text'>4</div></div>
+                                    <div class='choice' data-q='q3' data-v='8'><div class='choice-radio'></div><div class='choice-text'>8</div></div>
+                                    <div class='choice' data-q='q3' data-v='20'><div class='choice-radio'></div><div class='choice-text'>20</div></div>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
                     <div class='comp-error' id='comp-error'></div>
-                    <div class='btn-row' style='margin-top:24px;'>
-                        <button class='btn' id='comp-submit' disabled>Submit</button>
+
+                    <div class='comp-q-wrap' id='btn-wrap'>
+                        <div class='comp-q-inner'>
+                            <div class='btn-row' style='margin-top:8px;'>
+                                <button class='btn' id='comp-submit'>Submit</button>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>`,
@@ -500,16 +512,38 @@ function initStudy(graphData, condition) {
         on_load: function() {
             var answers = {};
 
+            function revealBlock(wrapId, blockId) {
+                var wrap  = document.getElementById(wrapId);
+                var block = document.getElementById(blockId);
+                if (!wrap) return;
+                // expand container
+                requestAnimationFrame(function() {
+                    wrap.classList.add('open');
+                });
+                // swing-in inner block w/ a snappy duration
+                if (block) {
+                    block.style.animationDuration = '900ms';
+                    block.style.animationDelay    = '200ms';
+                    block.classList.add('swing-in');
+                }
+            }
+
             document.querySelectorAll('.choice').forEach(function(el) {
                 el.addEventListener('click', function() {
                     var q = el.dataset.q, v = el.dataset.v;
-                    // deselect siblings
                     document.querySelectorAll('.choice[data-q="' + q + '"]').forEach(function(s) {
                         s.classList.remove('selected');
                     });
+                    var isFirst = !answers[q];  // first selection for this question
                     el.classList.add('selected');
                     answers[q] = v;
-                    document.getElementById('comp-submit').disabled = !(answers.q1 && answers.q2 && answers.q3);
+
+                    // reveal next step only on first answer per question
+                    if (isFirst) {
+                        if (q === 'q1') revealBlock('q2-wrap', 'q2-block');
+                        if (q === 'q2') revealBlock('q3-wrap', 'q3-block');
+                        if (q === 'q3') revealBlock('btn-wrap', null);
+                    }
                 });
             });
 
@@ -551,13 +585,13 @@ function initStudy(graphData, condition) {
         stimulus: `
             <div class='page-inner'>
                 <div class='card card-narrow' style='text-align:center;'>
-                    <h1 class='swing-in d-2'>Sometimes an alien will appear upside-down</h1>
-                    <p class='lead swing-in d-3' style='color:var(--ink-2);'>When that happens, press the
+                    <h1 class='swing-in d-1'>Sometimes an alien will appear upside-down</h1>
+                    <p class='lead swing-in d-2' style='color:var(--ink-2);'>When that happens, press the
                         <kbd style='font-family:var(--font-mono,monospace); background:var(--bg-2);
                             border:1px solid var(--line); padding:2px 10px; border-radius:6px;
                             font-size:14px; font-weight:600;'>SPACE</kbd> bar right away
                     </p>
-                    <div class='intro-figure' style='margin:24px 0 12px;'>
+                    <div class='intro-figure swing-in d-3' style='margin:24px 0 12px;'>
                         <div class='intro-fig-item'>
                             <div class='alien-img-wrap' style='width:160px; height:160px;'>
                                 <img src='stimuli/aliens/alien_01_green.png' class='alien-img' alt=''>
@@ -572,7 +606,7 @@ function initStudy(graphData, condition) {
                             <div class='fig-label' style='color:var(--ink);'>press SPACE</div>
                         </div>
                     </div>
-                    <div class='btn-row' style='margin-top:16px;'>
+                    <div class='btn-row swing-in d-4' style='margin-top:16px;'>
                         <button class='btn' id='p1-start-btn' disabled>Start <span class='lock-count' id='p1-lock-count'>(5s)</span></button>
                     </div>
                 </div>
@@ -602,23 +636,41 @@ function initStudy(graphData, condition) {
         }
     };
 
+    var blockTestInstructions = {
+        type: jsPsychHtmlButtonResponse,
+        stimulus: `
+            <div class='page-inner'>
+                <div class='card card-narrow'>
+                    <div class='eyebrow swing-in d-1'>After each round</div>
+                    <h1 class='swing-in d-2'>You'll get a quick check</h1>
+                    <p class='lead swing-in d-3' style='color:var(--ink-2);'>You'll see a pair and be asked to guess one alien's food based on their friend's.</p>
+                    <div class='btn-row swing-in d-4' id='bti-btn-row' style='pointer-events:none; opacity:0.4;'>
+                        <button class='btn btn-lg' id='bti-btn'>Got it</button>
+                    </div>
+                </div>
+            </div>`,
+        choices: [],
+        response_ends_trial: false,
+        on_load: function() {
+            // 3s read lock
+            setTimeout(function() {
+                var row = document.getElementById('bti-btn-row');
+                if (row) { row.style.pointerEvents = ''; row.style.opacity = '1'; }
+            }, 3000);
+            document.getElementById('bti-btn').addEventListener('click', function() {
+                jsPsych.finishTrial();
+            });
+        }
+    };
+
     var readyToStart = {
         type: jsPsychHtmlButtonResponse,
         stimulus: `
             <div class='page-inner'>
                 <div class='card card-narrow' style='text-align:center;'>
-                    <h1 style='font-size:26px;'>You're all set!</h1>
-                    <p class='muted'>Click below when you're ready to start.</p>
-                    <div style='background:var(--bg-2); border:1px solid var(--line);
-                        border-radius:var(--radius); padding:16px 22px; margin:20px 0 0; text-align:left;'>
-                        <p class='muted' style='margin:0; font-size:14.5px; line-height:1.6;'>
-                            <strong>How this works:</strong> After each round, you'll get a quick
-                            one-question check on a pair you just saw. If you score ${Math.round(BLOCK_TEST_ACCURACY_THRESHOLD * 100)}%
-                            or higher across at least ${BLOCK_TEST_MIN_RUNS} rounds, you'll move on early.
-                            Otherwise you'll complete all ${LEARNING_RUNS} rounds.
-                        </p>
-                    </div>
-                    <div class='btn-row' style='margin-top:20px;'>
+                    <h1 class='swing-in d-1' style='font-size:26px;'>You're all set!</h1>
+                    <p class='muted swing-in d-2'>Click below when you're ready to start.</p>
+                    <div class='btn-row swing-in d-3' style='margin-top:20px;'>
                         <button class='btn btn-lg' id='ready-btn'>Start experiment</button>
                     </div>
                 </div>
@@ -717,9 +769,9 @@ function initStudy(graphData, condition) {
             container.innerHTML = `
                 <div class='page-inner'>
                     <div class='card card-narrow' style='text-align:center;'>
-                        <h1 style='font-size:26px;'>Learning phase complete.</h1>
-                        <p class='muted'>${subMsg}</p>
-                        <div class='btn-row' style='margin-top:20px;'>
+                        <h1 class='swing-in d-1' style='font-size:26px;'>Learning phase complete.</h1>
+                        <p class='muted swing-in d-2'>${subMsg}</p>
+                        <div class='btn-row swing-in d-3' style='margin-top:20px;'>
                             <button class='btn' id='p1done-btn'>Continue</button>
                         </div>
                     </div>
@@ -734,53 +786,6 @@ function initStudy(graphData, condition) {
     // ══════════════════════════════════════════════════════════════
     // PHASE 2 — VALIDATION
     // ══════════════════════════════════════════════════════════════
-    var phase2Instructions = {
-        type: jsPsychHtmlButtonResponse,
-        stimulus: `
-            <div class='page-inner'>
-                <div class='card card-narrow'>
-                    <div class='eyebrow swing-in d-1'>Memory check</div>
-                    <h1 class='swing-in d-2'>Now we'll see what you remember.</h1>
-                    <p class='lead swing-in d-3' style='color:var(--ink-2);'>You'll answer two short sets of questions:</p>
-                    <div style='display:flex; flex-direction:column; gap:12px; margin:20px 0 4px;'>
-                        ${[['01','Which aliens were friends?'],['02','Is each alien green or orange?']].map(function(item) {
-                            return `<div style='display:flex; align-items:center; gap:16px; padding:14px 18px;
-                                background:var(--bg-2); border-radius:var(--radius); border:1px solid var(--line);'>
-                                <span style='font-family:var(--font-mono,monospace); font-size:12px;
-                                    color:var(--ink-3); font-weight:700; letter-spacing:0.08em;'>${item[0]}</span>
-                                <span style='font-size:16px; color:var(--ink);'>${item[1]}</span>
-                            </div>`;
-                        }).join('')}
-                    </div>
-                    <div class='btn-row' style='margin-top:24px;'>
-                        <button class='btn' id='p2-start-btn' disabled>Begin <span class='lock-count' id='p2-lock'>(5s)</span></button>
-                    </div>
-                </div>
-            </div>`,
-        choices: [],
-        response_ends_trial: false,
-        on_load: function() {
-            var secs = 5;
-            var t = setInterval(function() {
-                secs = Math.max(0, secs - 1);
-                var lock = document.getElementById('p2-lock');
-                var btn  = document.getElementById('p2-start-btn');
-                if (!btn) { clearInterval(t); return; }
-                if (secs > 0) {
-                    lock.textContent = '(' + secs + 's)';
-                } else {
-                    clearInterval(t);
-                    lock.textContent = '';
-                    btn.disabled = false;
-                }
-            }, 1000);
-            document.getElementById('p2-start-btn').addEventListener('click', function() {
-                clearInterval(t);
-                jsPsych.finishTrial();
-            });
-        }
-    };
-
     var edgeRecTrials = buildEdgeRecTrials(
         graphData.edge_recognition_trials, nameMapping, species, jsPsych, sessionData
     );
@@ -798,11 +803,11 @@ function initStudy(graphData, condition) {
                     <div class='eyebrow swing-in d-1'>New aliens</div>
                     <h1 class='swing-in d-2'>You'll now meet two new aliens</h1>
                     <p class='lead swing-in d-3' style='color:var(--ink-2);'>Your job will be to figure out what food each one likes to eat</p>
-                    <p style='color:var(--ink-2);'>
+                    <p class='swing-in d-4' style='color:var(--ink-2);'>
                         For each new alien, you'll get to choose <strong>one thing</strong> to learn about them —
                         either their color or who their friends are — and use that to make your best guess
                     </p>
-                    <div class='btn-row' style='margin-top:24px;'>
+                    <div class='btn-row swing-in d-5' style='margin-top:24px;'>
                         <button class='btn' id='p3-start-btn' disabled>Continue <span class='lock-count' id='p3-lock'>(5s)</span></button>
                     </div>
                 </div>
@@ -871,7 +876,7 @@ function initStudy(graphData, condition) {
                     <p class='muted swing-in d-3'>
                         What information did you find most useful? There are no wrong answers — we're just curious about your reasoning.
                     </p>
-                    <textarea name='strategy' class='strategy-textarea'
+                    <textarea name='strategy' class='strategy-textarea swing-in d-4'
                         placeholder='e.g. "I looked at whether the new alien seemed similar to..."'
                         rows='6'></textarea>
                 </div>
@@ -953,17 +958,17 @@ function initStudy(graphData, condition) {
         stimulus: `
             <div class='page-inner'>
                 <div class='card card-narrow complete-card'>
-                    <div class='check-circle'>
+                    <div class='check-circle swing-in d-1'>
                         <svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2.5'
                             stroke-linecap='round' stroke-linejoin='round'>
                             <polyline points='20 6 9 17 4 12'/>
                         </svg>
                     </div>
-                    <h1>Thank you!</h1>
-                    <p class='lead' style='color:var(--ink-2); text-align:center;'>
+                    <h1 class='swing-in d-2'>Thank you!</h1>
+                    <p class='lead swing-in d-3' style='color:var(--ink-2); text-align:center;'>
                         Your responses have been saved and will help our research.
                     </p>
-                    <p class='muted' style='text-align:center; margin-top:18px;'>
+                    <p class='muted swing-in d-4' style='text-align:center; margin-top:18px;'>
                         You'll be redirected back to Prolific automatically in a few seconds.<br>
                         If nothing happens, <a href='${PROLIFIC_COMPLETION_URL}' style='color:var(--ink);'>click here</a>.
                     </p>
@@ -1012,24 +1017,73 @@ function initStudy(graphData, condition) {
             conditional_function: function() { return _devStart <= 1; }
         },
         {
-            timeline: [phase1Instructions, readyToStart].concat(learningBlock).concat([phase1Done]),
+            timeline: [phase1Instructions, blockTestInstructions, readyToStart].concat(learningBlock).concat([phase1Done]),
             conditional_function: function() { return _devStart <= 2; }
         },
         {
             timeline: (function() {
-                var blocks = jsPsych.randomization.shuffle([
-                    [].concat(edgeRecTrials),
-                    [].concat(speciesRecallTrials)
+                var blockDefs = jsPsych.randomization.shuffle([
+                    { trials: [].concat(edgeRecTrials),      q: 'Which aliens were friends?' },
+                    { trials: [].concat(speciesRecallTrials), q: 'Is each alien green or orange?' }
                 ]);
-                blocks.forEach(function(block, i) {
-                    var orig = block[0].on_load;
-                    block[0].on_load = function() {
+                blockDefs.forEach(function(bd, i) {
+                    var orig = bd.trials[0].on_load;
+                    bd.trials[0].on_load = function() {
                         setPhase('memory', { total: 2, activeIdx: i, label: 'Section ' + (i + 1) + ' of 2' });
                         if (orig) orig();
                     };
                 });
+                // build instructions with items in the same order as the shuffled blocks
+                var items = blockDefs.map(function(bd, i) {
+                    var num = String(i + 1).padStart(2, '0');
+                    return `<div style='display:flex; align-items:center; gap:16px; padding:14px 18px;
+                        background:var(--bg-2); border-radius:var(--radius); border:1px solid var(--line);'>
+                        <span style='font-family:var(--font-mono,monospace); font-size:12px;
+                            color:var(--ink-3); font-weight:700; letter-spacing:0.08em;'>${num}</span>
+                        <span style='font-size:16px; color:var(--ink);'>${bd.q}</span>
+                    </div>`;
+                });
+                var phase2Instructions = {
+                    type: jsPsychHtmlButtonResponse,
+                    stimulus: `
+                        <div class='page-inner'>
+                            <div class='card card-narrow'>
+                                <div class='eyebrow swing-in d-1'>Memory check</div>
+                                <h1 class='swing-in d-2'>Now we'll see what you remember.</h1>
+                                <p class='lead swing-in d-3' style='color:var(--ink-2);'>You'll answer two short sets of questions:</p>
+                                <div class='swing-in d-4' style='display:flex; flex-direction:column; gap:12px; margin:20px 0 4px;'>
+                                    ${items.join('')}
+                                </div>
+                                <div class='btn-row swing-in d-5' style='margin-top:24px;'>
+                                    <button class='btn' id='p2-start-btn' disabled>Begin <span class='lock-count' id='p2-lock'>(5s)</span></button>
+                                </div>
+                            </div>
+                        </div>`,
+                    choices: [],
+                    response_ends_trial: false,
+                    on_load: function() {
+                        var secs = 5;
+                        var t = setInterval(function() {
+                            secs = Math.max(0, secs - 1);
+                            var lock = document.getElementById('p2-lock');
+                            var btn  = document.getElementById('p2-start-btn');
+                            if (!btn) { clearInterval(t); return; }
+                            if (secs > 0) {
+                                lock.textContent = '(' + secs + 's)';
+                            } else {
+                                clearInterval(t);
+                                lock.textContent = '';
+                                btn.disabled = false;
+                            }
+                        }, 1000);
+                        document.getElementById('p2-start-btn').addEventListener('click', function() {
+                            clearInterval(t);
+                            jsPsych.finishTrial();
+                        });
+                    }
+                };
                 return [phase2Instructions]
-                    .concat(blocks[0]).concat(blocks[1]);
+                    .concat(blockDefs[0].trials).concat(blockDefs[1].trials);
             })(),
             conditional_function: function() { return _devStart <= 3; }
         },
